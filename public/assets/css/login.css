@@ -1,0 +1,123 @@
+body {
+    background: url('https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDF8fGJhY2tncm91bmQlMjBpbWFnZXxlbnwwfHx8fDE2ODI3MjY0MjM&ixlib=rb-4.0.3&q=80&w=1080') no-repeat center center fixed;
+    background-size: cover;
+    font-family: 'Open Sans', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    filter: brightness(0.9); /* Slightly darken the background for better contrast */
+}
+
+.hero-section {
+    padding: 40px;
+    border-radius: 15px; /* Increased border radius for a softer look */
+    background: rgba(0, 0, 0, 0.8); /* Slightly lighter background for better visibility */
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3); /* Enhanced shadow for depth */
+    text-align: center;
+}
+
+label {
+    display: block;
+    margin: 10px 0 5px;
+    font-weight: bold;
+    color: #ffffff; /* Changed label color for better readability */
+}   
+
+input[type="email"],
+input[type="password"] {
+    width: 100%;
+    padding: 12px; /* Increased padding for a more comfortable input */
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    transition: border 0.3s, box-shadow 0.3s;
+}
+
+input[type="email"]:focus,
+input[type="password"]:focus {
+    border: 1px solid #007bff;
+    box-shadow: 0 0 8px rgba(0, 123, 255, 0.5); /* Enhanced focus effect */
+}
+
+.btn-glass-primary {
+    background: rgba(53, 66, 74, 0.9); /* Darkened button for better visibility */
+    border: none;
+    color: white;
+    padding: 12px 20px; /* Increased padding for a more substantial button */
+    border-radius: 30px;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.3s, transform 0.3s; /* Added transform for hover effect */
+}
+
+.btn-glass-primary:hover {
+    background: rgba(53, 66, 74, 1);
+    transform: scale(1.05); /* Slightly scale up on hover */
+}
+
+.error-messages {
+    color: #ff4d4d;
+    margin-top: 10px;
+}
+
+footer {
+    text-align: center;
+    padding: 20px;
+    background: rgba(53, 66, 74, 0.9);
+    color: white;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
+
+/* Link styles */
+a {
+    color: #007bff;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+a:hover {
+    color: rgb(44, 11, 33);
+    text-decoration: underline;
+}
+
+/* Transition effect for links */
+.transition-link {
+    display: inline-block;
+    position: relative;
+    overflow: hidden;
+}
+
+.transition-link::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: 100%;
+    height: 2px;
+    background: #007bff;
+}
+
+.transition-link:hover::after {
+    transform: translateX(-50%) scaleX(1);
+}
+
+/* 3D effect for the form */
+.form-container {
+    perspective: 1000px;
+}
+
+.form-inner {
+    transform-style: preserve-3d;
+}
+.form-container {
+    max-width: 800px;
+    background: rgba(199, 166, 166, 0.5);
+    padding: 3rem;
+    border-radius: 15px;
+}
