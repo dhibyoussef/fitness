@@ -1,69 +1,105 @@
 <?php
-require_once '../../models/NutritionModel.php';
-require_once '../../controllers/BaseController.php';
-require_once '../../../config/database.php';
+// app/controllers/NutritionController/CreateController.php
+require_once __DIR__ . '/../../models/NutritionModel.php';
+require_once __DIR__ . '/../../controllers/BaseController.php';
+require_once __DIR__ . '/../../../config/database.php';
+
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 
 class CreateController extends BaseController {
     private NutritionModel $nutritionModel;
+    private Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
         $this->nutritionModel = new NutritionModel($pdo);
+        $this->logger = new Logger('NutritionCreateController');
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../../logs/app.log', Logger::INFO));
+        $this->requireAuth();
     }
 
     public function create(array $data): void {
-        if (!$this->isUserAuthenticated()) {
-            $this->handleError('Unauthorized access. Please log in to create a meal plan.');
-            return;
-        }
-
         try {
-            // Validate input data
-            $this->validateNutritionData($data);
-
-            // Attempt to create nutrition entry
-            if (!$this->nutritionModel->createMeal($data)) {
-                throw new RuntimeException('Failed to create meal plan. Please try again later.');
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$this->isValidCsrfToken($data['csrf_token'] ?? '')) {
+                throw new Exception('Invalid request or security token.');
             }
 
-            // Set success message and redirect to nutrition index
-            $_SESSION['success_message'] = 'Meal plan created successfully.';
-            $this->redirect('../../views/nutrition/index.php');
+            $this->validateNutritionData($data);
+            $sanitizedData = [
+                'user_id' => (int)$_SESSION['user_id'],
+                'name' => $this->sanitizeInput($data['name']),
+                'calories' => (int)$data['calories'],
+                'protein' => isset($data['protein']) ? (float)$data['protein'] : null,
+                'carbs' => isset($data['carbs']) ? (float)$data['carbs'] : null,
+                'fat' => isset($data['fat']) ? (float)$data['fat'] : null,
+                'category_id' => isset($data['category_id']) ? (int)$data['category_id'] : null,
+                'created_at' => date('Y-m-d H:i:s')
+            ];
 
-        } catch (InvalidArgumentException $e) {
-            $this->handleError('Validation Error: ' . $e->getMessage());
-        } catch (RuntimeException $e) {
-            $this->handleError('Creation Error: ' . $e->getMessage());
+            if ($this->nutritionModel->createMeal($sanitizedData)) {
+                $this->logger->info("Meal plan created", [
+                    'user_id' => $_SESSION['user_id'],
+                    'name' => $sanitizedData['name']
+                ]);
+                $this->setFlashMessage('success', 'Meal plan created successfully!');
+                $this->redirect('/nutrition/index');
+            } else {
+                throw new Exception('Failed to create meal plan.');
+            }
         } catch (Exception $e) {
-            $this->handleError('An unexpected error occurred. Please try again later.');
+            $this->logger->error("Creation error", [
+                'message' => $e->getMessage(),
+                'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->setFlashMessage('error', $e->getMessage());
+            $this->redirect('/nutrition/create');
         }
     }
 
     private function validateNutritionData(array $data): void {
-        if (empty($data['name']) || !$this->isValidCalories($data['calories']) || !$this->isValidName($data['name'])) {
-            throw new InvalidArgumentException('Invalid meal plan data provided. Please ensure all fields are filled out correctly.');
+        if (empty($data['name']) || !$this->isValidName($data['name'])) {
+            throw new Exception('Meal name must be 3-100 characters and contain only letters, numbers, and spaces.');
+        }
+        if (!isset($data['calories']) || !$this->isValidCalories($data['calories'])) {
+            throw new Exception('Calories must be a number between 1 and 5000.');
+        }
+        if (isset($data['protein']) && !$this->isValidMacro($data['protein'])) {
+            throw new Exception('Protein must be a number between 0 and 1000 grams.');
+        }
+        if (isset($data['carbs']) && !$this->isValidMacro($data['carbs'])) {
+            throw new Exception('Carbs must be a number between 0 and 1000 grams.');
+        }
+        if (isset($data['fat']) && !$this->isValidMacro($data['fat'])) {
+            throw new Exception('Fat must be a number between 0 and 1000 grams.');
+        }
+        if (isset($data['category_id']) && !$this->isValidCategory($data['category_id'])) {
+            throw new Exception('Invalid category selected.');
         }
     }
 
-    private function isValidCalories($calories): bool {
-        return is_numeric($calories) && $calories > 0 && $calories <= 5000; // Ensure calories are within a reasonable range
-    }
-
     private function isValidName(string $name): bool {
-        return preg_match('/^[\p{L}\p{N}\s]+$/u', $name) === 1; // Allow letters from any language
+        $length = strlen(trim($name));
+        return $length >= 3 && $length <= 100 && preg_match('/^[\p{L}\p{N}\s]+$/u', $name);
     }
 
-    private function handleError(string $message): void {
-        $_SESSION['error_message'] = $message;
-        $this->redirect('../../views/error/error.php');
+    private function isValidCalories($calories): bool {
+        return is_numeric($calories) && $calories > 0 && $calories <= 5000;
     }
 
-    private function isUserAuthenticated(): bool {
-        return isset($_SESSION['user_id']) && $_SESSION['logged_in'] === true;
+    private function isValidMacro($value): bool {
+        return is_numeric($value) && $value >= 0 && $value <= 1000;
     }
 
-    protected function redirect($url) {
-        header("Location: $url");
-        exit();
+    private function isValidCategory($categoryId): bool {
+        $query = "SELECT COUNT(*) FROM categories WHERE id = :id";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute(['id' => (int)$categoryId]);
+        return $stmt->fetchColumn() > 0;
+    }
+
+    private function sanitizeInput(string $input): string {
+        return htmlspecialchars(trim($input), ENT_QUOTES, 'UTF-8');
     }
 }

@@ -1,43 +1,52 @@
 <?php
-require_once '../../models/ProgressModel.php';
-require_once '../../controllers/BaseController.php';
-require_once '../../../config/database.php';
+// app/controllers/ProgressController/IndexController.php
+require_once __DIR__ . '/../../models/ProgressModel.php';
+require_once __DIR__ . '/../../controllers/BaseController.php';
+require_once __DIR__ . '/../../../config/database.php';
+
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 
 class IndexController extends BaseController {
     private ProgressModel $progressModel;
+    private Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
         $this->progressModel = new ProgressModel($pdo);
+        $this->logger = new Logger('ProgressIndexController');
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../../logs/app.log', Logger::INFO));
+        $this->requireAuth();
     }
 
-    public function index(int $page = 1, int $itemsPerPage = 10, string $searchQuery = '', string $sortBy = 'date', string $sortOrder = 'DESC'): void {
-        if (!$this->isAuthenticated()) {
-            $this->redirectWithError('Unauthorized access.');
-            return;
-        }
-
+    public function index(int $page = 1, int $itemsPerPage = 10, string $filter = '', string $sortBy = 'date', string $sortOrder = 'DESC'): void {
         try {
-            $offset = ($page - 1) * $itemsPerPage;
-            $progressEntries = $this->progressModel->getProgressWithPagination($offset, $itemsPerPage, $searchQuery, $sortBy, $sortOrder);
-            $totalEntries = $this->progressModel->countProgressEntries($searchQuery);
+            $offset = max(0, ($page - 1) * $itemsPerPage);
+            $progressEntries = $this->progressModel->getProgressWithPagination($offset, $itemsPerPage, $filter, $sortBy, $sortOrder, (int)$_SESSION['user_id']);
+            $totalEntries = $this->progressModel->countProgressEntries($filter, (int)$_SESSION['user_id']);
+            $totalPages = max(1, (int)ceil($totalEntries / $itemsPerPage));
 
             $stats = $this->calculateProgressStats($progressEntries);
-
-            $this->renderView('../../views/progress/index.php', [
+            $this->render(__DIR__ . '/../../views/progress/index.php', [
                 'progressEntries' => $progressEntries,
                 'currentPage' => $page,
-                'totalPages' => ceil($totalEntries / $itemsPerPage),
-                'searchQuery' => $searchQuery,
+                'totalPages' => $totalPages,
+                'itemsPerPage' => $itemsPerPage,
+                'filter' => htmlspecialchars($filter),
                 'sortBy' => $sortBy,
                 'sortOrder' => $sortOrder,
                 'stats' => $stats,
-                'itemsPerPage' => $itemsPerPage
+                'csrf_token' => $this->generateCsrfToken(),
+                'execution_time' => microtime(true) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true))
             ]);
-
         } catch (Exception $e) {
-            error_log('Error fetching progress entries: ' . $e->getMessage());
-            $this->redirectWithError("Error fetching progress entries. Please try again later.");
+            $this->logger->error("Progress fetch error", [
+                'message' => $e->getMessage(),
+                'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->setFlashMessage('error', 'Error loading progress.');
+            $this->redirect('/error');
         }
     }
 
@@ -45,32 +54,17 @@ class IndexController extends BaseController {
         $stats = [
             'weight_change' => 0,
             'muscle_mass_change' => 0,
-            'body_fat_change' => 0
+            'body_fat_change' => 0,
+            'total_entries' => count($entries)
         ];
 
         if (count($entries) >= 2) {
             $newest = reset($entries);
             $oldest = end($entries);
-            
-            $stats['weight_change'] = $newest['weight'] - $oldest['weight'];
-            $stats['muscle_mass_change'] = $newest['muscle_mass'] - $oldest['muscle_mass'];
-            $stats['body_fat_change'] = $newest['body_fat'] - $oldest['body_fat'];
+            $stats['weight_change'] = round($newest['weight'] - $oldest['weight'], 1);
+            $stats['muscle_mass_change'] = round(($newest['muscle_mass'] ?? 0) - ($oldest['muscle_mass'] ?? 0), 1);
+            $stats['body_fat_change'] = round($newest['body_fat'] - $oldest['body_fat'], 1);
         }
-
         return $stats;
-    }
-
-    private function renderView(string $viewPath, array $data): void {
-        if (!file_exists($viewPath) || !is_readable($viewPath)) {
-            $this->redirectWithError("View template not found at: $viewPath");
-            return;
-        }
-        extract($data);
-        include $viewPath;
-    }
-
-    private function redirectWithError(string $message): void {
-        $_SESSION['error _message'] = $message;
-        $this->redirect('../../views/error/error.php');
     }
 }

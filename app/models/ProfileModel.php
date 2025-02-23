@@ -17,6 +17,27 @@ class ProfileModel extends BaseModel {
         }
         return $result;
     }
+    /**
+     * Executes a prepared statement with the provided SQL query and parameters.
+     *
+     * @param string $query The SQL query to execute.
+     * @param array $params Associative array of parameters to bind to the query.
+     * @return array|null The result set as an associative array, or null if no rows are found.
+     * @throws Exception If the query fails to execute.
+     */
+    protected function executeQuery(string $query, array $params): ?array {
+        $stmt = $this->pdo->prepare($query);
+        if (!$stmt) {
+            throw new Exception("Failed to prepare the SQL statement.");
+        }
+
+        if (!$stmt->execute($params)) {
+            throw new Exception("Query execution failed.");
+        }
+
+        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $result ?: null;
+    }
 
     /**
      * Updates a user's profile information.

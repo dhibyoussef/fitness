@@ -1,70 +1,81 @@
 <?php
-declare(strict_types=1);
+// app/models/BaseModel.php
+require_once __DIR__ . '/../../vendor/autoload.php';
+
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 
 class BaseModel {
     protected PDO $pdo;
+    protected Logger $logger;
 
     public function __construct(PDO $pdo) {
         $this->pdo = $pdo;
+        $this->logger = new Logger('BaseModel');
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../logs/app.log', Logger::INFO));
     }
 
-    /**
-     * Executes a SQL query with prepared statements and fetches a single record from the database.
-     * 
-     * @param string $query SQL query to be executed.
-     * @param array $params Parameters to bind to the query.
-     * @return array|null The single record fetched from the database or null if no record is found.
-     * @throws Exception If there is an error in preparing or executing the query.
-     */
-    protected function executeQuery(string $query, array $params = []): ?array {
-        $stmt = $this->prepareAndExecuteStatement($query, $params);
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
-    }
-
-    /**
-     * Prepares and executes a SQL statement with given parameters.
-     * 
-     * @param string $query SQL query to be prepared and executed.
-     * @param array $params Parameters to bind to the SQL query.
-     * @return PDOStatement The prepared and executed statement.
-     * @throws Exception If preparing or executing the statement fails.
-     */
-    private function prepareAndExecuteStatement(string $query, array $params): PDOStatement {
-        $stmt = $this->pdo->prepare($query);
-        if ($stmt === false) {
-            throw new Exception("Failed to prepare statement: " . implode(' ', $this->pdo->errorInfo()));
+    protected function fetchSingle(string $query, array $params = []): ?array {
+        try {
+            $stmt = $this->pdo->prepare($query);
+            $stmt->execute($params);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (PDOException $e) {
+            $this->logger->error("Database fetch single error", [
+                'query' => $query,
+                'params' => $params,
+                'message' => $e->getMessage()
+            ]);
+            throw $e;
         }
-
-        if (!$stmt->execute($params)) {
-            throw new Exception("Query execution failed: " . implode(' ', $stmt->errorInfo()));
-        }
-
-        return $stmt;
     }
 
-    /**
-     * Fetches all records from the database based on a given query.
-     * 
-     * @param string $query SQL query to be executed.
-     * @param array $params Parameters to bind to the query.
-     * @return array An array of records fetched from the database.
-     * @throws Exception If there is an error in preparing or executing the query.
-     */
     protected function fetchAll(string $query, array $params = []): array {
-        $stmt = $this->prepareAndExecuteStatement($query, $params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->pdo->prepare($query);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (PDOException $e) {
+            $this->logger->error("Database fetch all error", [
+                'query' => $query,
+                'params' => $params,
+                'message' => $e->getMessage()
+            ]);
+            throw $e;
+        }
     }
 
-    /**
-     * Fetches a single value from the database.
-     * 
-     * @param string $query SQL query to be executed.
-     * @param array $params Parameters to bind to the query.
-     * @return mixed The single value fetched from the database.
-     * @throws Exception If there is an error in preparing or executing the query.
-     */
-    protected function fetchSingleValue(string $query, array $params = []): mixed {
-        $stmt = $this->prepareAndExecuteStatement($query, $params);
-        return $stmt->fetchColumn();
+    protected function execute(string $query, array $params = []): bool {
+        try {
+            $stmt = $this->pdo->prepare($query);
+            return $stmt->execute($params);
+        } catch (PDOException $e) {
+            $this->logger->error("Database execute error", [
+                'query' => $query,
+                'params' => $params,
+                'message' => $e->getMessage()
+            ]);
+            throw $e;
+        }
     }
+
+    protected function getLastInsertId(): int {
+        return (int)$this->pdo->lastInsertId();
+    }
+
+    protected function beginTransaction(): void {
+        $this->pdo->beginTransaction();
+        $this->logger->debug("Transaction begun");
+    }
+
+    protected function commit(): void {
+        $this->pdo->commit();
+        $this->logger->debug("Transaction committed");
+    }
+
+    protected function rollBack(): void {
+        $this->pdo->rollBack();
+        $this->logger->debug("Transaction rolled back");
+    }
+
 }

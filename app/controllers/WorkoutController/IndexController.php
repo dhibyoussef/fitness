@@ -1,65 +1,60 @@
 <?php
-require_once '../../models/WorkoutModel.php';
-require_once '../../controllers/BaseController.php';
-require_once '../../../config/database.php';
+// app/controllers/WorkoutController/IndexController.php
+require_once __DIR__ . '/../../models/WorkoutModel.php';
+require_once __DIR__ . '/../../controllers/BaseController.php';
+require_once __DIR__ . '/../../../config/database.php';
+
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 
 class IndexController extends BaseController {
     private WorkoutModel $workoutModel;
+    private Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
         $this->workoutModel = new WorkoutModel($pdo);
+        $this->logger = new Logger('WorkoutIndexController');
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../../logs/app.log', Logger::INFO));
+        $this->requireAuth();
     }
 
-    public function index(int $page = 1, string $filter = ''): void {
-        if (!$this->isUseAuthenticated()) {
-            $this->redirectWithError('Unauthorized access.');
-            return;
-        }
-
-        $pageSize = 10; // Number of records per page
-        $offset = ($page - 1) * $pageSize;
-
+    public function index(int $page = 1, int $itemsPerPage = 10, string $filter = '', string $sortBy = 'created_at', string $sortOrder = 'DESC', bool $showPredefined = false): void {
         try {
-            $workouts = $this->workoutModel->getFilteredWorkouts(json_decode($filter, true), $offset, $pageSize);
-            $totalWorkouts = (int) $this->workoutModel->countFilteredWorkouts(json_decode($filter, true));
-            $totalPages = ceil($totalWorkouts / $pageSize);
+            $offset = max(0, ($page - 1) * $itemsPerPage);
+            $workouts = $this->workoutModel->getFilteredWorkouts($filter, $offset, $itemsPerPage, $sortBy, $sortOrder, (int)$_SESSION['user_id'], $showPredefined);
+            $totalWorkouts = $this->workoutModel->countFilteredWorkouts($filter, (int)$_SESSION['user_id'], $showPredefined);
+            $totalPages = max(1, (int)ceil($totalWorkouts / $itemsPerPage));
 
-            $this->renderView('../../views/workout/index.php', [
+            $this->render(__DIR__ . '/../../views/workout/index.php', [
                 'workouts' => $workouts,
                 'currentPage' => $page,
-                'totalPages' => $totalPages
+                'totalPages' => $totalPages,
+                'itemsPerPage' => $itemsPerPage,
+                'filter' => htmlspecialchars($filter),
+                'sortBy' => $sortBy,
+                'sortOrder' => $sortOrder,
+                'showPredefined' => $showPredefined,
+                'csrf_token' => $this->generateCsrfToken(),
+                'stats' => $this->getWorkoutStats(),
+                'execution_time' => microtime(true) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true))
             ]);
         } catch (Exception $e) {
-            $this->handleError($e);
+            $this->logger->error("Workouts fetch error", [
+                'message' => $e->getMessage(),
+                'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->setFlashMessage('error', 'Error loading workouts.');
+            $this->redirect('/error');
         }
     }
 
-    private function renderView(string $viewPath, array $data): void {
-        if (!file_exists($viewPath) || !is_readable($viewPath)) {
-            $this->redirectWithError("View template not found at: $viewPath");
-            return;
-        }
-        extract($data);
-        include $viewPath;
-    }
-
-    private function handleError(Exception $exception): void {
-        error_log($exception->getMessage());
-        $this->redirectWithError('An error occurred while processing your request.');
-    }
-
-    private function isUseAuthenticated(): bool {
-        return isset($_SESSION['user_id']) && $_SESSION['user_id'] > 0;
-    }
-
-    private function redirectWithError(string $message): void {
-        $_SESSION['error_message'] = $message;
-        $this->redirect('../../views/error.php');
-    }
-
-    protected function redirect($url): void {
-        header("Location: $url");
-        exit();
+    private function getWorkoutStats(): array {
+        $query = "SELECT SUM(duration) as total_duration, AVG(duration) as avg_duration 
+                  FROM workouts WHERE user_id = :user_id AND deleted_at IS NULL";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute(['user_id' => (int)$_SESSION['user_id']]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: ['total_duration' => 0, 'avg_duration' => 0];
     }
 }

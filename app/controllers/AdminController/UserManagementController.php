@@ -1,84 +1,117 @@
 <?php
-require_once '../../models/UserModel.php';
-require_once '../../controllers/BaseController.php';
+// app/controllers/AdminController/UserManagementController.php
+require_once __DIR__ . '/../../models/UserModel.php';
+require_once __DIR__ . '/../../controllers/BaseController.php';
+require_once __DIR__ . '/../../../config/database.php';
+
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 
 class UserManagementController extends BaseController {
     private UserModel $userModel;
+    private Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
         $this->userModel = new UserModel($pdo);
+        $this->logger = new Logger('UserManagementController');
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../../logs/app.log', Logger::INFO));
+        $this->requireAuth();
     }
 
-    public function index(): void {
+    public function index(int $page = 1, int $perPage = 10, string $search = ''): void {
         try {
-            $this->verifyAdminAccess();
-            $users = $this->userModel->getAllUsers();
-            $this->renderView('../../views/admin/user_management.php', ['users' => $users]);
+            $this->checkAdminPermissions();
+            $offset = max(0, ($page - 1) * $perPage);
+            $users = $this->userModel->getAllUsers($offset, $perPage, $search);
+            $totalUsers = $this->userModel->getUserCount($search);
+
+            $this->render(__DIR__ . '/../../views/admin/user_management.php', [
+                'users' => $users,
+                'currentPage' => $page,
+                'totalPages' => max(1, ceil($totalUsers / $perPage)),
+                'perPage' => $perPage,
+                'search' => htmlspecialchars($search),
+                'csrf_token' => $this->generateCsrfToken(),
+                'execution_time' => microtime(true) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true))
+            ]);
         } catch (Exception $e) {
-            $this->handleError('Error fetching users: ' . $e->getMessage());
+            $this->logger->error("User fetch error", [
+                'message' => $e->getMessage(),
+                'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->renderError("Failed to load users: " . htmlspecialchars($e->getMessage()));
         }
     }
 
     public function viewUserDetails(int $id): void {
         try {
-            $this->verifyAdminAccess();
+            $this->checkAdminPermissions();
             $user = $this->userModel->getUserById($id);
             if ($user) {
-                $this->renderView('../../views/admin/user_details.php', ['user' => $user]);
+                $this->render(__DIR__ . '/../../views/admin/user_details.php', [
+                    'user' => $user,
+                    'csrf_token' => $this->generateCsrfToken(),
+                    'execution_time' => microtime(true) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true))
+                ]);
             } else {
-                $this->handleError('User not found.');
+                $this->logger->warning("User not found", ['id' => $id]);
+                $this->renderError("User ID $id not found.");
             }
         } catch (Exception $e) {
-            $this->handleError('Error fetching user details: ' . $e->getMessage());
+            $this->logger->error("User details error", [
+                'id' => $id,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->renderError("Failed to load user details: " . htmlspecialchars($e->getMessage()));
         }
     }
 
-    public function bulkActivateUsers(array $userIds): void {
+    public function bulkActivateUsers(): void {
         try {
-            $this->verifyAdminAccess();
-            foreach ($userIds as $id) {
-                $this->userModel->activateUser($id);
+            $this->checkAdminPermissions();
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$this->isValidCsrfToken($_POST['csrf_token'] ?? '')) {
+                throw new Exception("Invalid request or security token.");
             }
-            $_SESSION['success'] = 'Users activated successfully.';
-            $this->redirect('../../views/admin/user_management.php');
+
+            $userIds = json_decode($_POST['user_ids'] ?? '[]', true);
+            if (!is_array($userIds) || empty($userIds)) {
+                throw new Exception("No users selected for activation.");
+            }
+
+            $activated = 0;
+            foreach ($userIds as $id) {
+                if ($this->userModel->activateUser((int)$id)) {
+                    $activated++;
+                }
+            }
+            $this->logger->info("Bulk user activation", ['count' => $activated, 'user_ids' => $userIds]);
+            $this->setFlashMessage('success', "$activated users activated successfully.");
         } catch (Exception $e) {
-            $this->handleError('Error activating users: ' . $e->getMessage());
+            $this->logger->error("Bulk activation error", [
+                'message' => $e->getMessage(),
+                'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->setFlashMessage('error', "Failed to activate users: " . $e->getMessage());
         }
+        $this->redirect('/admin/user_management');
     }
 
-    private function handleError(string $message): void {
-        error_log($message);
-        $_SESSION['error'] = $message;
-        $this->redirectToErrorPage($message);
-    }
-
-    private function renderView(string $viewPath, array $data): void {
-        if ($this->isViewReadable($viewPath)) {
-            extract($data, EXTR_SKIP);
-            include $viewPath;
-        } else {
-            $this->handleError('View not found: ' . $viewPath);
-        }
-    }
-
-    private function isViewReadable(string $viewPath): bool {
-        return is_readable($viewPath);
-    }
-
-    private function redirectToErrorPage(string $message): void {
-        header("Location: ../../views/error/error.php?message=" . urlencode($message));
-        exit();
-    }
-
-    private function verifyAdminAccess(): void {
+    private function checkAdminPermissions(): void {
         if (!$this->isAdmin()) {
-            $this->handleError('Unauthorized access attempt.');
-            $this->redirect('../../views/auth/login.php');
+            $this->logger->warning("Unauthorized access attempt", [
+                'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'ip' => $_SERVER['REMOTE_ADDR']
+            ]);
+            $this->setFlashMessage('error', 'Admin access required.');
+            $this->redirect('/auth/login');
         }
     }
 
-    private function isAdmin(): bool {
-        return $_SESSION['user_role'] === 'admin';
+    public function isAdmin(): bool {
+        return isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
     }
 }

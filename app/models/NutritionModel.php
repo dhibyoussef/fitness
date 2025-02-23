@@ -1,175 +1,109 @@
 <?php
-require_once 'BaseModel.php';
+// app/models/NutritionModel.php
+require_once __DIR__ . '/BaseModel.php';
 
 class NutritionModel extends BaseModel {
-    /**
-     * Inserts a new meal into the database.
-     * @param array $data Associative array containing meal data.
-     * @return bool Returns true on success or false on failure.
-     */
     public function createMeal(array $data): bool {
-        $query = "INSERT INTO meals (user_id, name, calories, category_id) VALUES (:user_id, :name, :calories, :category_id)";
-        $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $success = $stmt->execute($data);
-        return $success && $stmt->rowCount() > 0;
+        $query = "INSERT INTO meals (user_id, name, calories, protein, carbs, fat, category_id, created_at, updated_at) 
+                  VALUES (:user_id, :name, :calories, :protein, :carbs, :fat, :category_id, :created_at, NOW())";
+        return $this->execute($query, [
+            'user_id' => $data['user_id'],
+            'name' => $data['name'],
+            'calories' => $data['calories'],
+            'protein' => $data['protein'] ?? null,
+            'carbs' => $data['carbs'] ?? null,
+            'fat' => $data['fat'] ?? null,
+            'category_id' => $data['category_id'] ?? null,
+            'created_at' => $data['created_at'] ?? date('Y-m-d H:i:s')
+        ]);
     }
 
-    /**
-     * Retrieves meals from the database with optional pagination and filtering.
-     * @param int $offset The offset for pagination.
-     * @param int $limit The number of records to retrieve.
-     * @param string $filter Optional filter for meal names.
-     * @return array An array of associative arrays representing each meal.
-     */
-    public function fetchMeals(int $offset = 0, int $limit = 10, string $filter = ''): array {
-        $query = "SELECT * FROM meals WHERE name LIKE :filter LIMIT :offset, :limit";
-        $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $stmt->bindValue(':filter', '%' . $filter . '%', PDO::PARAM_STR);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    public function getNutritionById(int $id): ?array {
+        $query = "SELECT m.*, c.name as category_name 
+                  FROM meals m 
+                  LEFT JOIN categories c ON m.category_id = c.id 
+                  WHERE m.id = :id AND m.deleted_at IS NULL";
+        return $this->fetchSingle($query, ['id' => $id]);
     }
 
-    /**
-     * Counts the total number of meals in the database with optional filtering.
-     * @param string $filter Optional filter for meal names.
-     * @return int The total number of meals.
-     */
-    public function countFilteredMeals(string $filter = ''): int {
-        $query = "SELECT COUNT(*) as total FROM meals WHERE name LIKE :filter";
+    public function updateMeal(int $id, array $data): bool {
+        $query = "UPDATE meals 
+                  SET name = :name, calories = :calories, protein = :protein, carbs = :carbs, fat = :fat, 
+                      category_id = :category_id, updated_at = NOW() 
+                  WHERE id = :id AND deleted_at IS NULL";
+        return $this->execute($query, [
+            'id' => $id,
+            'name' => $data['name'],
+            'calories' => $data['calories'],
+            'protein' => $data['protein'] ?? null,
+            'carbs' => $data['carbs'] ?? null,
+            'fat' => $data['fat'] ?? null,
+            'category_id' => $data['category_id'] ?? null
+        ]);
+    }
+
+    public function deleteMeal(int $id): bool {
+        $query = "UPDATE meals SET deleted_at = NOW() WHERE id = :id AND deleted_at IS NULL";
+        return $this->execute($query, ['id' => $id]);
+    }
+
+    public function fetchMeals(int $offset, int $limit, string $filter = '', string $sortBy = 'created_at', string $sortOrder = 'DESC', int $userId): array {
+        $query = "SELECT m.*, c.name as category_name 
+                  FROM meals m 
+                  LEFT JOIN categories c ON m.category_id = c.id 
+                  WHERE m.user_id = :user_id AND m.name LIKE :filter AND m.deleted_at IS NULL 
+                  ORDER BY $sortBy $sortOrder 
+                  LIMIT :offset, :limit";
+        return $this->fetchAll($query, [
+            'user_id' => $userId,
+            'filter' => "%$filter%",
+            'offset' => $offset,
+            'limit' => $limit
+        ]);
+    }
+
+    public function countFilteredMeals(string $filter = '', int $userId): int {
+        $query = "SELECT COUNT(*) FROM meals 
+                  WHERE user_id = :user_id AND name LIKE :filter AND deleted_at IS NULL";
         $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $stmt->bindValue(':filter', '%' . $filter . '%', PDO::PARAM_STR);
-        $stmt->execute();
+        $stmt->execute(['user_id' => $userId, 'filter' => "%$filter%"]);
         return (int)$stmt->fetchColumn();
     }
 
-    /**
-     * Retrieves a single meal by its ID.
-     * @param int $id The ID of the meal.
-     * @return array|null An associative array of the meal data, or null if not found.
-     */
-    public function getNutritionById(int $id): ?array {
-        $query = "SELECT * FROM meals WHERE id = :id";
-        $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $stmt->execute(['id' => $id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
-    }
-
-    /**
-     * Updates a meal in the database.
-     * @param int $id The ID of the meal to update.
-     * @param array $data Associative array containing updated meal data.
-     * @return bool Returns true on success or false on failure.
-     */
-    public function updateMeal(int $id, array $data): bool {
-        $query = "UPDATE meals SET name = :name, calories = :calories, category_id = :category_id WHERE id = :id";
-        $params = array_merge(['id' => $id], $data);
-        $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $success = $stmt->execute($params);
-        return $success && $stmt->rowCount() > 0;
-    }
-
-    /**
-     * Deletes a meal from the database.
-     * @param int $id The ID of the meal to delete.
-     * @return bool Returns true on success or false on failure.
-     */
-    public function deleteMeal(int $id): bool {
-        $query = "DELETE FROM meals WHERE id = :id";
-        $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $success = $stmt->execute(['id' => $id]);
-        return $success && $stmt->rowCount() > 0;
-    }
-
-    /**
-     * Retrieves all meals from the database.
-     * @return array An array of associative arrays representing each meal.
-     */
-    public function fetchAllMeals(): array {
-        $query = "SELECT * FROM meals";
-        $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    /**
-     * Retrieves nutritional values for a meal by its ID.
-     * @param int $mealId The ID of the meal.
-     * @return array|null An associative array of nutritional values, or null if not found.
-     */
-    public function getNutritionalValuesByMealId(int $mealId): ?array {
-        $query = "SELECT * FROM nutritional_values WHERE meal_id = :meal_id";
-        $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $stmt->execute(['meal_id' => $mealId]);
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
-    }
-
-    /**
-     * Retrieves portion sizes for a meal by its ID.
-     * @param int $mealId The ID of the meal.
-     * @return array An array of portion sizes.
-     */
-    public function getPortionSizesByMealId(int $mealId): array {
-        $query = "SELECT * FROM portion_sizes WHERE meal_id = :meal_id";
-        $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $stmt->execute(['meal_id' => $mealId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    }
-
-    /**
-     * Retrieves ingredients for a meal by its ID.
-     * @param int $mealId The ID of the meal.
-     * @return array An array of ingredients.
-     */
-    public function getIngredientsByMealId(int $mealId): array {
-        $query = "SELECT * FROM ingredients WHERE meal_id = :meal_id";
-        $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $stmt->execute(['meal_id' => $mealId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    }
-
-    /**
-     * Retrieves overall nutrition statistics.
-     * @return array An associative array of overall nutrition statistics.
-     */
     public function getOverallNutritionStatistics(): array {
-        $query = "SELECT SUM(calories) as total_calories, COUNT(*) as total_meals FROM meals";
-        $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $query = "SELECT AVG(calories) as avg_calories_per_meal, 
+                         SUM(calories) as total_calories, 
+                         COUNT(*) as total_meals, 
+                         MAX(calories) as max_calories,
+                         AVG(protein) as avg_protein,
+                         AVG(carbs) as avg_carbs,
+                         AVG(fat) as avg_fat
+                  FROM meals 
+                  WHERE deleted_at IS NULL";
+        return $this->pdo->query($query)->fetch(PDO::FETCH_ASSOC) ?: [
+            'avg_calories_per_meal' => 0,
+            'total_calories' => 0,
+            'total_meals' => 0,
+            'max_calories' => 0,
+            'avg_protein' => 0,
+            'avg_carbs' => 0,
+            'avg_fat' => 0
+        ];
+    }
+
+    public function getAllCategories(): array {
+        $query = "SELECT id, name FROM categories WHERE deleted_at IS NULL ORDER BY name ASC";
+        return $this->fetchAll($query);
+    }
+
+    public function getCategoryById(?int $categoryId): ?string {
+        if (!$categoryId) return null;
+        $query = "SELECT name FROM categories WHERE id = :id AND deleted_at IS NULL";
+        $result = $this->fetchSingle($query, ['id' => $categoryId]);
+        return $result['name'] ?? null;
+    }
+    public function getNutritionStats(int $userId): array {
+        $query = "SELECT COUNT(*) as total_meals, AVG(calories) as avg_calories, SUM(calories) as total_calories FROM meals WHERE user_id = :user_id AND deleted_at IS NULL";
+        return $this->fetchSingle($query, ['user_id' => $userId]);
     }
 }

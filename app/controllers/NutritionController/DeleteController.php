@@ -1,109 +1,70 @@
 <?php
-require_once '../../models/NutritionModel.php';
-require_once '../../controllers/BaseController.php';
-require_once '../../../config/database.php';
+// app/controllers/NutritionController/DeleteController.php
+require_once __DIR__ . '/../../models/NutritionModel.php';
+require_once __DIR__ . '/../../controllers/BaseController.php';
+require_once __DIR__ . '/../../../config/database.php';
+
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 
 class DeleteController extends BaseController {
     private NutritionModel $nutritionModel;
+    private Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
         $this->nutritionModel = new NutritionModel($pdo);
+        $this->logger = new Logger('NutritionDeleteController');
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../../logs/app.log', Logger::INFO));
+        $this->requireAuth();
     }
 
-    public function delete(int $id, bool $confirmDeletion = false): void {
-        if (!$this->isUserLoggedIn()) {
-            $this->handleUnauthorizedAccess();
-            return;
-        }
-
-        if ($this->isInvalidId($id)) {
-            return;
-        }
-
-        if (!$confirmDeletion) {
-            $this->promptForConfirmation($id);
-            return;
-        }
-
-        $this->processDeletion($id);
-    }
-
-    private function isUserLoggedIn(): bool {
-        return isset($_SESSION['user_logged_in']) && $_SESSION['user_logged_in'];
-    }
-
-    private function handleUnauthorizedAccess(): void {
-        $this->setErrorMessage('Unauthorized access. Please log in to delete a meal plan.');
-        $this->redirectToLogin();
-    }
-
-    private function isInvalidId(int $id): bool {
-        if ($id <= 0) {
-            $this->setErrorMessage('Invalid nutrition ID provided.');
-            $this->redirectToIndex();
-            return true;
-        }
-        return false;
-    }
-
- private function promptForConfirmation(int $id): void {
-        $_SESSION['confirmation_message'] = 'Are you sure you want to delete this meal plan?';
-        header("Location: ../../views/nutrition/confirm_delete.php?id=$id");
-        exit();
-    }
-
-    private function processDeletion(int $id): void {
+    public function delete(int $id): void {
         try {
-            $this->ensureMealPlanExists($id);
-            $this->attemptDelete($id);
-            $this->setSuccessMessage('Nutrition entry deleted successfully.');
-        } catch (RuntimeException $e) {
-            $this->handleException($e, $id);
+            if ($id <= 0) {
+                throw new Exception('Invalid meal plan ID.');
+            }
+
+            $meal = $this->nutritionModel->getNutritionById($id);
+            if (!$meal || $meal['user_id'] !== (int)$_SESSION['user_id']) {
+                throw new Exception('Meal plan not found or not owned by you.');
+            }
+
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                $this->render(__DIR__ . '/../../views/nutrition/delete.php', [
+                    'id' => $id,
+                    'name' => $meal['name'],
+                    'csrf_token' => $this->generateCsrfToken()
+                ]);
+                return;
+            }
+
+            if (!$this->isValidCsrfToken($_POST['csrf_token'] ?? '')) {
+                throw new Exception('Invalid security token.');
+            }
+
+            if (!isset($_POST['confirm']) || $_POST['confirm'] !== 'yes') {
+                throw new Exception('Deletion not confirmed.');
+            }
+
+            if ($this->nutritionModel->deleteMeal($id)) {
+                $this->logger->info("Meal plan deleted", [
+                    'id' => $id,
+                    'user_id' => $_SESSION['user_id']
+                ]);
+                $this->setFlashMessage('success', 'Meal plan deleted successfully.');
+            } else {
+                throw new Exception('Failed to delete meal plan.');
+            }
         } catch (Exception $e) {
-            $this->handleGenericException($e, $id);
-        } finally {
-            $this->redirectToIndex();
+            $this->logger->error("Deletion error", [
+                'message' => $e->getMessage(),
+                'id' => $id,
+                'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->setFlashMessage('error', $e->getMessage());
         }
-    }
-
-    private function ensureMealPlanExists(int $id): void {
-        if (!$this->nutritionModel->getNutritionById($id)) {
-            throw new RuntimeException('Nutrition entry does not exist.');
-        }
-    }
-
-    private function attemptDelete(int $id): void {
-        if (!$this->nutritionModel->deleteMeal($id)) {
-            throw new RuntimeException('Failed to delete nutrition entry. Please try again.');
-        }
-    }
-
-    private function setErrorMessage(string $message): void {
-        $_SESSION['error_message'] = $message;
-    }
-
-    private function setSuccessMessage(string $message): void {
-        $_SESSION['success_message'] = $message;
-    }
-
-    private function handleException(RuntimeException $e, int $id): void {
-        error_log(sprintf('DeleteController Runtime Error: %s | Nutrition ID: %d', $e->getMessage(), $id));
-        $this->setErrorMessage('An error occurred while processing your request. Please try again.');
-    }
-
-    private function handleGenericException(Exception $e, int $id): void {
-        error_log(sprintf('DeleteController Error: %s | Nutrition ID: %d', $e->getMessage(), $id));
-        $this->setErrorMessage('An unexpected error occurred. Please contact support.');
-    }
-
-    private function redirectToIndex(): void {
-        header("Location: ../../views/nutrition/index.php");
-        exit();
-    }
-
-    private function redirectToLogin(): void {
-        header("Location: ../../views/auth/login.php");
-        exit();
+        $this->redirect('/nutrition/index');
     }
 }

@@ -1,58 +1,31 @@
 <?php
-session_start(); // Start the session to manage user authentication
+// app/controllers/AuthMiddleware.php
+require_once __DIR__ . '/../../../vendor/autoload.php';
+
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 
 class AuthMiddleware {
-    public function handle($request): void {
-        // Redirect to login page if user is not logged in
-        if (!$this->isUserLoggedIn()) {
-            $this->redirectToLogin();
+    private Logger $logger;
+
+    public function __construct() {
+        $this->logger = new Logger('AuthMiddleware');
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../logs/app.log', Logger::INFO));
+    }
+
+    public function handle(callable $next): void {
+        if (!isset($_SESSION['user_id']) || $_SESSION['logged_in'] !== true) {
+            $this->logger->info("Redirecting to login", ['ip' => $_SERVER['REMOTE_ADDR']]);
+            $_SESSION['flash_messages']['error'] = 'Please log in to continue.';
+            header("Location: /auth/login", true, 401);
+            exit;
         }
 
-        // Log user access for security monitoring
-        $this->logAccess();
-
-        // Perform additional security checks
-        $this->performAdditionalChecks($request);
-    }
-
-    private function isUserLoggedIn(): bool {
-        return isset($_SESSION['user_id']);
-    }
-
-    private function redirectToLogin(): void {
-        header("Location: /login.php");
-        exit;
-    }
-
-    private function logAccess(): void {
-        $userId = $_SESSION['user_id'] ?? 'unknown';
-        $requestUri = $_SERVER['REQUEST_URI'] ?? 'undefined';
-        $timestamp = date('Y-m-d H:i:s');
-        error_log("User  {$userId} accessed {$requestUri} at {$timestamp}");
-    }
-
-    private function performAdditionalChecks($request): void {
-        // Check for valid security token
-        if (isset($request['token']) && !$this->validateToken($request['token'])) {
-            $this->denyAccess();
-        }
-    }
-
-    private function validateToken(string $token): bool {
-        // Implement robust token validation logic
-        $expectedToken = $this->getExpectedToken();
-        return hash_equals($expectedToken, $token);
-    }
-
-    private function getExpectedToken(): ?string {
-        // Retrieve the expected token from a secure source
-        // This should be replaced with a method that retrieves the token from a secure configuration or database
-        return $_SESSION['csrf_token'] ?? null; // Assuming CSRF token is used for simplicity
-    }
-
-    private function denyAccess(): void {
-        header("HTTP/1.1 401 Unauthorized");
-        exit('Invalid token');
+        $this->logger->info("Access logged", [
+            'user_id' => $_SESSION['user_id'],
+            'uri' => $_SERVER['REQUEST_URI'],
+            'timestamp' => date('Y-m-d H:i:s')
+        ]);
+        $next();
     }
 }
-?>

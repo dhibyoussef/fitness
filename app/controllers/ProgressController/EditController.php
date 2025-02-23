@@ -1,121 +1,108 @@
 <?php
-require_once '../../models/ProgressModel.php';
-require_once '../../controllers/BaseController.php';
-require_once '../../../config/database.php';
+// app/controllers/ProgressController/EditController.php
+require_once __DIR__ . '/../../models/ProgressModel.php';
+require_once __DIR__ . '/../../controllers/BaseController.php';
+require_once __DIR__ . '/../../../config/database.php';
+
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 
 class EditController extends BaseController {
     private ProgressModel $progressModel;
+    private Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
         $this->progressModel = new ProgressModel($pdo);
+        $this->logger = new Logger('ProgressEditController');
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../../logs/app.log', Logger::INFO));
+        $this->requireAuth();
     }
 
     public function edit(int $id): void {
-        if (!$this->isUserAuthenticated()) {
-            $this->redirectWithError('Unauthorized access. Please login to edit progress entries.');
-            return;
-        }
+        try {
+            if ($id <= 0) {
+                throw new Exception('Invalid progress ID.');
+            }
 
-        if ($this->isInvalidId($id)) {
-            $this->redirectWithError('Invalid progress ID provided. Please try again.');
-            return;
-        }
+            $progress = $this->progressModel->getProgressById($id);
+            if (!$progress || $progress['user_id'] !== (int)$_SESSION['user_id']) {
+                throw new Exception('Progress entry not found or not owned by you.');
+            }
 
-        $progress = $this->progressModel->getProgressById($id);
-        if (!$progress) {
-            $this->redirectWithError("Progress entry not found for ID: $id");
-            return;
+            $this->render(__DIR__ . '/../../views/progress/edit.php', [
+                'progress' => $progress,
+                'csrf_token' => $this->generateCsrfToken(),
+                'execution_time' => microtime(true) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true))
+            ]);
+        } catch (Exception $e) {
+            $this->logger->error("Edit fetch error", [
+                'message' => $e->getMessage(),
+                'id' => $id,
+                'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->setFlashMessage('error', $e->getMessage());
+            $this->redirect('/progress/index');
         }
-
-        $this->renderView('../../views/progress/edit.php', ['progress' => $progress]);
     }
 
     public function update(int $id, array $data): void {
-        if (!$this->isUserAuthenticated()) {
-            $this->redirectWithError('Unauthorized access. Please login to update progress entries.');
-            return;
-        }
-
-        if ($this->isInvalidId($id)) {
-            $this->redirectWithError('Invalid progress ID provided.');
-            return;
-        }
-
-        if (!$this->isValidData($data)) {
-            $this->redirectWithError('Please ensure all measurements are valid and within reasonable ranges.');
-            return;
-        }
-
         try {
-            if ($this->progressModel->updateProgress($id, $data)) {
-                $_SESSION['success_message'] = 'Progress updated successfully! Your fitness journey is on track.';
-                $this->redirect('../../views/progress/confirmation.php');
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$this->isValidCsrfToken($data['csrf_token'] ?? '')) {
+                throw new Exception('Invalid request or security token.');
+            }
+
+            if ($id <= 0) {
+                throw new Exception('Invalid progress ID.');
+            }
+
+            $progress = $this->progressModel->getProgressById($id);
+            if (!$progress || $progress['user_id'] !== (int)$_SESSION['user_id']) {
+                throw new Exception('Progress entry not found or not owned by you.');
+            }
+
+            $this->validateData($data);
+            $sanitizedData = [
+                'weight' => (float)$data['weight'],
+                'body_fat' => (float)$data['body_fat'],
+                'muscle_mass' => isset($data['muscle_mass']) ? (float)$data['muscle_mass'] : null,
+                'date' => $data['date']
+            ];
+
+            if ($this->progressModel->updateProgress($id, $sanitizedData)) {
+                $this->logger->info("Progress updated", [
+                    'id' => $id,
+                    'user_id' => $_SESSION['user_id']
+                ]);
+                $this->setFlashMessage('success', 'Progress updated successfully!');
             } else {
-                $this->redirectWithError('No changes were detected in the progress entry.');
+                throw new Exception('No changes detected or update failed.');
             }
         } catch (Exception $e) {
-            error_log('Progress update failed: ' . $e->getMessage());
-            $this->redirectWithError('Unable to update progress. Please try again or contact support if the issue persists.');
+            $this->logger->error("Update error", [
+                'message' => $e->getMessage(),
+                'id' => $id,
+                'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->setFlashMessage('error', $e->getMessage());
         }
+        $this->redirect('/progress/index');
     }
 
-    private function isInvalidId(int $id): bool {
-        return $id <= 0 || !filter_var($id, FILTER_VALIDATE_INT);
-    }
-
-    private function isValidData(array $data): bool {
-        // Check if all required fields are present
-        $requiredFields = ['weight', 'muscle_mass', 'body_fat', 'date'];
-        foreach ($requiredFields as $field) {
-            if (!isset($data[$field])) {
-                return false;
-            }
+    private function validateData(array $data): void {
+        if (empty($data['weight']) || !is_numeric($data['weight']) || $data['weight'] < 20 || $data['weight'] > 300) {
+            throw new Exception('Weight must be 20-300 kg.');
         }
-
-        // Validate weight (in kg) - between 20kg and 300kg
-        if (!is_numeric($data['weight']) || $data[' weight'] < 20 || $data['weight'] > 300) {
-            return false;
+        if (empty($data['body_fat']) || !is_numeric($data['body_fat']) || $data['body_fat'] < 2 || $data['body_fat'] > 50) {
+            throw new Exception('Body fat must be 2-50%.');
         }
-
-        // Validate muscle mass (in kg) - between 10kg and 100kg
-        if (!is_numeric($data['muscle_mass']) || $data['muscle_mass'] < 10 || $data['muscle_mass'] > 100) {
-            return false;
+        if (isset($data['muscle_mass']) && (!is_numeric($data['muscle_mass']) || $data['muscle_mass'] < 10 || $data['muscle_mass'] > 100)) {
+            throw new Exception('Muscle mass must be 10-100 kg if provided.');
         }
-
-        // Validate body fat percentage - between 2% and 50%
-        if (!is_numeric($data['body_fat']) || $data['body_fat'] < 2 || $data['body_fat'] > 50) {
-            return false;
+        if (empty($data['date']) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['date'])) {
+            throw new Exception('Invalid date format (YYYY-MM-DD).');
         }
-
-        // Validate date format
-        if (!strtotime($data['date'])) {
-            return false;
-        }
-
-        return true;
-    }
-
-    private function isUserAuthenticated(): bool {
-        return isset($_SESSION['user_id']);
-    }
-
-    private function redirectWithError(string $message): void {
-        $_SESSION['error_message'] = $message;
-        $this->redirect('../../views/error/error.php');
-    }
-
-    protected function redirect($url): void {
-        header("Location: $url");
-        exit();
-    }
-
-    private function renderView(string $viewPath, array $data): void {
-        if (!file_exists($viewPath) || !is_readable($viewPath)) {
-            $this->redirectWithError("View template not found: $viewPath");
-            return;
-        }
-        extract($data);
-        include $viewPath;
     }
 }

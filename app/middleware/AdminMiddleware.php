@@ -1,54 +1,48 @@
 <?php
+// app/controllers/AdminMiddleware.php
+require_once __DIR__ . '/../../../vendor/autoload.php';
+
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 
 class AdminMiddleware {
-    public function handle($request): void {
-        $this->ensureSessionSecurity();
+    private Logger $logger;
 
-        if ($this->userHasAdminPrivileges()) {
-            $this->processAdminRequest($request);
-        } else {
-            $this->denyAccess();
-        }
+    public function __construct() {
+        $this->logger = new Logger('AdminMiddleware');
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../logs/app.log', Logger::INFO));
     }
 
-    private function ensureSessionSecurity(): void {
+    public function handle(callable $next): void {
         if (session_status() !== PHP_SESSION_ACTIVE) {
-            session_start();
-            session_regenerate_id(true); // Enhances security against session fixation
+            throw new Exception('Session not started.');
         }
-    }
 
-    private function userHasAdminPrivileges(): bool {
-        // Verifies if the current user is an administrator
-        return isset($_SESSION['user_id']) && $this->checkAdminRole($_SESSION['role']);
-    }
+        if (time() - ($_SESSION['last_activity'] ?? 0) > SESSION_TIMEOUT) {
+            $this->logger->info("Session timeout", ['user_id' => $_SESSION['user_id'] ?? 'unknown']);
+            session_destroy();
+            $this->redirectUnauthorizedUser('Session expired.');
+        }
 
-    private function checkAdminRole(string $role): bool {
-        // Determines if the role is equivalent to 'admin'
-        return $role === 'admin';
-    }
-
-    private function denyAccess(): void {
-        $this->recordUnauthorizedAttempt();
-        $this->redirectUnauthorizedUser ();
+        if (isset($_SESSION['user_id']) && $_SESSION['role'] === 'admin') {
+            $next();
+        } else {
+            $this->recordUnauthorizedAttempt();
+            $this->redirectUnauthorizedUser('Admin access required.');
+        }
     }
 
     private function recordUnauthorizedAttempt(): void {
-        // Records attempts to access resources without proper authorization
-        $userId = $_SESSION['user_id'] ?? 'unknown';
-        error_log("Unauthorized access attempt by user ID: $userId");
+        $this->logger->warning("Unauthorized access attempt", [
+            'user_id' => $_SESSION['user_id'] ?? 'unknown',
+            'ip' => $_SERVER['REMOTE_ADDR'],
+            'uri' => $_SERVER['REQUEST_URI']
+        ]);
     }
 
-    private function redirectUnauthorizedUser (): void {
-        // Redirects users without admin rights to the login page with an error notification
-        $_SESSION['error_message'] = "Access denied. Administrator privileges are required.";
-        header("Location: /login.php?error=access_denied");
+    private function redirectUnauthorizedUser(string $message): void {
+        $_SESSION['flash_messages']['error'] = $message;
+        header("Location: /auth/login", true, 403);
         exit;
-    }
-
-    private function processAdminRequest($request): void {
-        // Handles requests that need administrative rights
-        // This is a placeholder for handling specific admin requests
-        // You can add logic here to process the request further
     }
 }

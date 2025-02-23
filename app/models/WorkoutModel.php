@@ -1,127 +1,108 @@
 <?php
-require_once 'BaseModel.php';
+// app/models/WorkoutModel.php
+require_once __DIR__ . '/BaseModel.php';
 
 class WorkoutModel extends BaseModel {
-    /**
-     * Inserts a new workout into the database.
-     * @param array $data Details of the workout.
-     * @return bool True if successful, false otherwise.
-     */
     public function createWorkout(array $data): bool {
-        $query = "INSERT INTO workouts (user_id, name, description, category_id, duration, calories) VALUES (:user_id, :name, :description, :category_id, :duration, :calories)";
-        $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $success = $stmt->execute($data);
-        return $success && $stmt->rowCount() > 0;
+        $query = "INSERT INTO workouts (user_id, name, description, category_id, duration, calories, is_custom, created_at, updated_at) 
+                  VALUES (:user_id, :name, :description, :category_id, :duration, :calories, :is_custom, NOW(), NOW())";
+        return $this->execute($query, [
+            'user_id' => $data['user_id'],
+            'name' => $data['name'],
+            'description' => $data['description'],
+            'category_id' => $data['category_id'] ?? null,
+            'duration' => $data['duration'],
+            'calories' => $data['calories'] ?? null,
+            'is_custom' => $data['is_custom'] ?? 0
+        ]);
     }
 
-    /**
-     * Fetches workouts based on filters, with pagination.
-     * @param array $filter Conditions to filter by.
-     * @param int $offset Starting index for fetching records.
-     * @param int $pageSize Number of records to fetch.
-     * @return array List of workouts.
-     */
-    public function getFilteredWorkouts(array $filter, int $offset, int $pageSize): array {
-        $query = "SELECT * FROM workouts WHERE 1=1";
-        $params = [];
-        foreach ($filter as $key => $value) {
-            $query .= " AND $key LIKE :$key";
-            $params[$key] = "%$value%";
-        }
-        $query .= " LIMIT :offset, :pageSize";
-        $params['offset'] = $offset;
-        $params['pageSize'] = $pageSize;
-
-        $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    /**
-     * Counts workouts matching the filter criteria.
-     * @param array $filter Conditions to filter by.
-     * @return int Count of workouts.
-     */
-    public function countFilteredWorkouts(array $filter): int {
-        $query = "SELECT COUNT(*) FROM workouts WHERE 1=1";
-        $params = [];
-        foreach ($filter as $key => $value) {
-            $query .= " AND $key LIKE :$key";
-            $params[$key] = "%$value%";
-        }
-
-        $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $stmt->execute($params);
-        return (int) $stmt->fetchColumn();
-    }
-
-    /**
-     * Retrieves a workout by its ID.
-     * @param int $id Workout ID.
-     * @return array|null Workout details or null if not found.
-     */
     public function getWorkoutById(int $id): ?array {
-        $query = "SELECT * FROM workouts WHERE id = :id";
-        $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $stmt->execute(['id' => $id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $query = "SELECT w.*, c.name as category_name 
+                  FROM workouts w 
+                  LEFT JOIN categories c ON w.category_id = c.id 
+                  WHERE w.id = :id AND w.deleted_at IS NULL";
+        return $this->fetchSingle($query, ['id' => $id]);
     }
 
-    /**
-     * Updates workout details in the database.
-     * @param int $id Workout ID.
-     * @param array $data Updated details.
-     * @return bool True if successful, false otherwise.
-     */
     public function updateWorkout(int $id, array $data): bool {
-        $query = "UPDATE workouts SET name = :name, description = :description, category_id = :category_id, duration = :duration, calories = :calories WHERE id = :id";
-        $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $success = $stmt->execute(array_merge(['id' => $id], $data));
-        return $success && $stmt->rowCount() > 0;
+        $query = "UPDATE workouts 
+                  SET name = :name, description = :description, category_id = :category_id, 
+                      duration = :duration, calories = :calories, updated_at = NOW() 
+                  WHERE id = :id AND deleted_at IS NULL";
+        return $this->execute($query, [
+            'id' => $id,
+            'name' => $data['name'],
+            'description' => $data['description'],
+            'category_id' => $data['category_id'] ?? null,
+            'duration' => $data['duration'],
+            'calories' => $data['calories'] ?? null
+        ]);
     }
 
-    /**
-     * Deletes a workout from the database.
-     * @param int $id Workout ID.
-     * @return bool True if successful, false otherwise.
-     */
     public function deleteWorkout(int $id): bool {
-        $query = "DELETE FROM workouts WHERE id = :id";
-        $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $success = $stmt->execute(['id' => $id]);
-        return $success && $stmt->rowCount() > 0;
+        $query = "UPDATE workouts SET deleted_at = NOW() WHERE id = :id AND deleted_at IS NULL";
+        return $this->execute($query, ['id' => $id]);
     }
 
-    /**
-     * Retrieves overall statistics for all workouts.
-     * @return array Overall workout statistics.
-     */
-    public function getOverallWorkoutStatistics(): array {
-        $query = "SELECT COUNT(*) as total_workouts, SUM(duration) as total_duration, SUM(calories) as total_calories FROM workouts";
+    public function getFilteredWorkouts(string $filter, int $offset, int $limit, string $sortBy, string $sortOrder, int $userId, bool $showPredefined): array {
+        $query = "SELECT w.*, c.name as category_name 
+                  FROM workouts w 
+                  LEFT JOIN categories c ON w.category_id = c.id 
+                  WHERE (w.user_id = :user_id OR (:show_predefined AND w.is_predefined = 1)) 
+                  AND w.name LIKE :filter AND w.deleted_at IS NULL 
+                  ORDER BY $sortBy $sortOrder 
+                  LIMIT :offset, :limit";
+        return $this->fetchAll($query, [
+            'user_id' => $userId,
+            'show_predefined' => (int)$showPredefined,
+            'filter' => "%$filter%",
+            'offset' => $offset,
+            'limit' => $limit
+        ]);
+    }
+
+    public function countFilteredWorkouts(string $filter, int $userId, bool $showPredefined): int {
+        $query = "SELECT COUNT(*) FROM workouts 
+                  WHERE (user_id = :user_id OR (:show_predefined AND is_predefined = 1)) 
+                  AND name LIKE :filter AND deleted_at IS NULL";
         $stmt = $this->pdo->prepare($query);
-        if (!$stmt) {
-            throw new Exception("Failed to prepare statement.");
-        }
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $stmt->execute([
+            'user_id' => $userId,
+            'show_predefined' => (int)$showPredefined,
+            'filter' => "%$filter%"
+        ]);
+        return (int)$stmt->fetchColumn();
+    }
+
+    public function getOverallWorkoutStatistics(): array {
+        $query = "SELECT COUNT(*) as total_workouts, 
+                         AVG(duration) as avg_duration, 
+                         SUM(calories) as total_calories, 
+                         COUNT(DISTINCT category_id) as categories_used 
+                  FROM workouts 
+                  WHERE deleted_at IS NULL";
+        return $this->pdo->query($query)->fetch(PDO::FETCH_ASSOC) ?: [
+            'total_workouts' => 0,
+            'avg_duration' => 0,
+            'total_calories' => 0,
+            'categories_used' => 0
+        ];
+    }
+
+    public function getAllCategories(): array {
+        $query = "SELECT id, name FROM categories WHERE deleted_at IS NULL ORDER BY name ASC";
+        return $this->fetchAll($query);
+    }
+
+    public function getCategoryById(?int $categoryId): ?string {
+        if (!$categoryId) return null;
+        $query = "SELECT name FROM categories WHERE id = :id AND deleted_at IS NULL";
+        $result = $this->fetchSingle($query, ['id' => $categoryId]);
+        return $result['name'] ?? null;
+    }
+    public function getoWorkoutStats(int $userId): array {
+        $query = "SELECT COUNT(*) as total_workouts, AVG(duration) as avg_duration, SUM(calories) as total_calories, COUNT(DISTINCT category_id) as categories_used FROM workouts WHERE user_id = :user_id AND deleted_at IS NULL";
+        return $this->fetchSingle($query, ['user_id' => $userId]);
     }
 }
-?>

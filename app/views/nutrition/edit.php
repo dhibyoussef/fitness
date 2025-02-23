@@ -1,181 +1,88 @@
 <?php
+// app/views/nutrition/edit.php
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header('Location: /login');
+    exit;
+}
+require_once __DIR__ . '../../../app/models/NutritionModel.php';
 
-
-// In a real application, you would fetch the meal plan data from the database
-// For this example, we'll use mock data
-$meal_plan = [
-    'id' => 1,
-    'name' => 'High Protein Plan',
-    'calories' => 2500,
-    'protein' => 200,
-    'carbs' => 250,
-    'fat' => 70
-];
-
-$pageTitle = 'Edit Meal Plan - Fitness Tracker';
+$nutritionModel = new NutritionModel($pdo);
+$nutrition = $nutritionModel->getNutritionById($_SESSION['user_id']);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $pageTitle; ?></title>
+    <title>Edit Meal Plan</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
 </head>
 
-<body class="bg-gray-100 font-sans">
-    <header class="bg-white shadow-md">
-        <nav class="container mx-auto px-6 py-3">
-            <div class="flex justify-between items-center">
-                <a href="index.php" class="text-2xl font-bold text-gray-800">Fitness Tracker</a>
-                <div class="space-x-4">
-                    <a href="dashboard.php" class="text-gray-600 hover:text-blue-500">Dashboard</a>
-                    <a href="workout_index.php" class="text-gray-600 hover:text-blue-500">Workouts</a>
-                    <a href="nutrition_index.php" class="text-blue-500 font-semibold">Nutrition</a>
-                    <a href="progress_index.php" class="text-gray-600 hover:text-blue-500">Progress</a>
-                    <a href="logout.php" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600">Logout</a>
-                </div>
+<body class="bg-gray-100">
+    <div class="container mx-auto py-8">
+        <h1 class="text-3xl font-bold mb-6 animate__animated animate__fadeIn">Edit Meal Plan</h1>
+
+        <?php if ($error = isset($_SESSION['flash_messages']['error']) ? $_SESSION['flash_messages']['error'] : null): ?>
+        <div class="alert alert-danger animate__animated animate__shakeX"><?php echo htmlspecialchars($error); ?></div>
+        <?php endif; ?>
+
+        <form method="POST" action="/nutrition/update/<?php echo $nutrition['id']; ?>"
+            class="card shadow-sm p-4 animate__animated animate__fadeInUp">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+
+            <div class="mb-3">
+                <label for="name" class="form-label">Meal Name</label>
+                <input type="text" name="name" id="name" class="form-control"
+                    value="<?php echo htmlspecialchars($nutrition['name']); ?>" required>
             </div>
-        </nav>
-    </header>
 
-    <main class="container mx-auto px-6 py-8">
+            <div class="mb-3">
+                <label for="calories" class="form-label">Calories</label>
+                <input type="number" name="calories" id="calories" class="form-control"
+                    value="<?php echo htmlspecialchars($nutrition['calories']); ?>" required>
+            </div>
 
+            <div class="mb-3">
+                <label for="protein" class="form-label">Protein (g)</label>
+                <input type="number" name="protein" id="protein" class="form-control"
+                    value="<?php echo htmlspecialchars($nutrition['protein']); ?>" step="0.1">
+            </div>
 
-        <!DOCTYPE html>
-        <html lang=" en">
+            <div class="mb-3">
+                <label for="carbs" class="form-label">Carbs (g)</label>
+                <input type="number" name="carbs" id="carbs" class="form-control"
+                    value="<?php echo htmlspecialchars($nutrition['carbs']); ?>" step="0.1">
+            </div>
 
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title><?php echo $pageTitle; ?></title>
-            <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap"
-                rel="stylesheet">
-            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        </head>
+            <div class="mb-3">
+                <label for="fat" class="form-label">Fat (g)</label>
+                <input type="number" name="fat" id="fat" class="form-control"
+                    value="<?php echo htmlspecialchars($nutrition['fat']); ?>" step="0.1">
+            </div>
 
-        <body class="bg-gray-100 font-sans">
-            <header class="bg-white shadow-md">
-                <nav class="container mx-auto px-6 py-3">
-                    <div class="flex justify-between items-center">
-                        <a href="index.php" class="text-2xl font-bold text-gray-800">Fitness Tracker</a>
-                        <div class="space-x-4">
-                            <a href="dashboard.php" class="text-gray-600 hover:text-blue-500">Dashboard</a>
-                            <a href="user_management.php" class="text-gray-600 hover:text-blue-500">User Management</a>
-                            <a href="statistics.php" class="text-blue-500 font-semibold">Statistics</a>
-                            <a href="logout.php"
-                                class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600">Logout</a>
-                        </div>
-                    </div>
-                </nav>
-            </header>
+            <div class="mb-3">
+                <label for="category_id" class="form-label">Category</label>
+                <select name="category_id" id="category_id" class="form-select">
+                    <option value="">Select a category</option>
+                    <?php foreach ($categories as $category): ?>
+                    <option value="<?php echo $category['id']; ?>"
+                        <?php echo $category['id'] == $nutrition['category_id'] ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars($category['name']); ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
 
-            <main class="container mx-auto px-6 py-8">
-                <h1 class="text-3xl font-bold text-gray-800 mb-8">App Statistics</h1>
+            <button type="submit" class="btn btn-primary">Update Meal</button>
+            <a href="/nutrition/index" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div class="bg-white rounded-lg shadow-md p-6">
-                        <h2 class="text-xl font-semibold text-gray-800 mb-4">User Growth</h2>
-                        <canvas id="userGrowthChart"></canvas>
-                    </div>
-                    <div class="bg-white rounded-lg shadow-md p-6">
-                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Activity Distribution</h2>
-                        <canvas id="activityDistributionChart"></canvas>
-                    </div>
-                    <div class="bg-white rounded-lg shadow-md p-6">
-                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Workout Popularity</h2>
-                        <canvas id="workoutPopularityChart"></canvas>
-                    </div>
-                    <div class="bg-white rounded-lg shadow-md p-6">
-                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Nutrition Plan Usage</h2>
-                        <canvas id="nutritionPlanUsageChart"></canvas>
-                    </div>
-                </div>
-            </main>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
 
-            <footer class="bg-gray-800 text-white py-4 mt-8">
-                <div class="container mx-auto px-6 text-center">
-                    <p>&copy; 2025 Fitness Tracker. All rights reserved.</p>
-                </div>
-            </footer>
-
-            <script>
-            // User Growth Chart
-            new Chart(document.getElementById('userGrowthChart'), {
-                type: 'line',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                    datasets: [{
-                        label: 'New Users',
-                        data: [50, 80, 120, 160, 200, 250],
-                        borderColor: 'rgb(59, 130, 246)',
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                }
-            });
-
-            // Activity Distribution Chart
-            new Chart(document.getElementById('activityDistributionChart'), {
-                type: 'pie',
-                data: {
-                    labels: ['Workouts', 'Nutrition Tracking', 'Progress Tracking'],
-                    datasets: [{
-                        data: [45, 30, 25],
-                        backgroundColor: ['#3B82F6', '#10B981', '#F59E0B']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                }
-            });
-
-            // Workout Popularity Chart
-            new Chart(document.getElementById('workoutPopularityChart'), {
-                type: 'bar',
-                data: {
-                    labels: ['Strength Training', 'Cardio', 'Yoga', 'HIIT', 'Pilates'],
-                    datasets: [{
-                        label: 'Popularity',
-                        data: [300, 250, 200, 180, 150],
-                        backgroundColor: '#3B82F6'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-
-            // Nutrition Plan Usage Chart
-            new Chart(document.getElementById('nutritionPlanUsageChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['High Protein', 'Low Carb', 'Balanced', 'Vegan', 'Keto'],
-                    datasets: [{
-                        data: [30, 25, 20, 15, 10],
-                        backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                }
-            });
-            </script>
-        </body>
-
-        </html>
+</html>

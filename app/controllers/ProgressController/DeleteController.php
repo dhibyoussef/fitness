@@ -1,73 +1,70 @@
 <?php
-require_once '../../models/ProgressModel.php';
-require_once '../../controllers/BaseController.php';
-require_once '../../../config/database.php';
+// app/controllers/ProgressController/DeleteController.php
+require_once __DIR__ . '/../../models/ProgressModel.php';
+require_once __DIR__ . '/../../controllers/BaseController.php';
+require_once __DIR__ . '/../../../config/database.php';
+
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 
 class DeleteController extends BaseController {
     private ProgressModel $progressModel;
+    private Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
         $this->progressModel = new ProgressModel($pdo);
+        $this->logger = new Logger('ProgressDeleteController');
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../../logs/app.log', Logger::INFO));
+        $this->requireAuth();
     }
 
     public function delete(int $id): void {
-        if (!$this->isUserAuthenticated()) {
-            $this->redirectWithError('Unauthorized access. Please login to delete progress entries.');
-            return;
-        }
-
-        if ($this->isInvalidId($id)) {
-            $this->redirectWithError('Invalid progress ID provided. Please try again.');
-            return;
-        }
-
-        // Verify the progress entry exists
-        if (!$this->progressModel->exists($id)) {
-            $this->redirectWithError('Progress entry not found. It may have been already deleted.');
-            return;
-        }
-
-        // Check for deletion confirmation
-        if (!$this->confirmDeletion()) {
-            $this->redirectWithError('Please confirm that you want to delete this progress entry.');
-            return;
-        }
-
         try {
+            if ($id <= 0) {
+                throw new Exception('Invalid progress ID.');
+            }
+
+            $progress = $this->progressModel->getProgressById($id);
+            if (!$progress || $progress['user_id'] !== (int)$_SESSION['user_id']) {
+                throw new Exception('Progress entry not found or not owned by you.');
+            }
+
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                $this->render(__DIR__ . '/../../views/progress/delete.php', [
+                    'id' => $id,
+                    'date' => $progress['date'],
+                    'csrf_token' => $this->generateCsrfToken()
+                ]);
+                return;
+            }
+
+            if (!$this->isValidCsrfToken($_POST['csrf_token'] ?? '')) {
+                throw new Exception('Invalid security token.');
+            }
+
+            if (!isset($_POST['confirm']) || $_POST['confirm'] !== 'yes') {
+                throw new Exception('Deletion not confirmed.');
+            }
+
             if ($this->progressModel->deleteProgress($id)) {
-                error_log("Progress entry {$id} deleted successfully by user {$_SESSION['user_id']}");
-                $_SESSION['success_message'] = 'Progress entry deleted successfully. You can add new progress entries anytime.';
-                $this->redirect('../../views/progress/index.php');
+                $this->logger->info("Progress deleted", [
+                    'id' => $id,
+                    'user_id' => $_SESSION['user_id']
+                ]);
+                $this->setFlashMessage('success', 'Progress entry deleted successfully.');
             } else {
-                $this->redirectWithError('Unable to delete progress entry. Please try again.');
+                throw new Exception('Failed to delete progress entry.');
             }
         } catch (Exception $e) {
-            error_log('Progress deletion failed: ' . $e->getMessage());
-            $this->redirectWithError('An error occurred while deleting the progress entry. Please try again later.');
+            $this->logger->error("Deletion error", [
+                'message' => $e->getMessage(),
+                'id' => $id,
+                'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->setFlashMessage('error', $e->getMessage());
         }
-    }
-
-    private function isInvalidId(int $id): bool {
-        return $id <= 0 || !filter_var($id, FILTER_VALIDATE_INT);
-    }
-
-    private function isUserAuthenticated(): bool {
-        return isset($_SESSION['user_id']);
-    }
-
-    private function confirmDeletion(): bool {
-        return isset($_POST['confirm']) && strtolower(trim($_POST['confirm'])) === 'yes';
-    }
-
-    private function redirectWithError(string $message): void {
-        $_SESSION['error_message'] = $message;
-        header('Location: ../../views/error/error.php');
-        exit();
-    }
-
-    protected function redirect($url): void {
-        header("Location: $url");
-        exit();
+        $this->redirect('/progress/index');
     }
 }

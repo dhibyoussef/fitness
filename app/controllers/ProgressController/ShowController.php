@@ -1,70 +1,49 @@
 <?php
-require_once '../../models/ProgressModel.php';
-require_once '../../controllers/BaseController.php';
-require_once '../../../config/database.php';
+// app/controllers/ProgressController/ShowController.php
+require_once __DIR__ . '/../../models/ProgressModel.php';
+require_once __DIR__ . '/../../controllers/BaseController.php';
+require_once __DIR__ . '/../../../config/database.php';
+
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 
 class ShowController extends BaseController {
     private ProgressModel $progressModel;
+    private Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
         $this->progressModel = new ProgressModel($pdo);
+        $this->logger = new Logger('ProgressShowController');
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../../logs/app.log', Logger::INFO));
+        $this->requireAuth();
     }
 
     public function show(int $id): void {
-        if (!$this->isUserAuthorized()) {
-            $this->redirectWithError('Unauthorized access.');
-            return;
+        try {
+            if ($id <= 0) {
+                throw new Exception('Invalid progress ID.');
+            }
+
+            $progress = $this->progressModel->getProgressById($id);
+            if (!$progress || $progress['user_id'] !== (int)$_SESSION['user_id']) {
+                throw new Exception('Progress entry not found or not owned by you.');
+            }
+
+            $this->render(__DIR__ . '/../../views/progress/show.php', [
+                'progress' => $progress,
+                'csrf_token' => $this->generateCsrfToken(),
+                'execution_time' => microtime(true) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true))
+            ]);
+        } catch (Exception $e) {
+            $this->logger->error("Progress show error", [
+                'message' => $e->getMessage(),
+                'id' => $id,
+                'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->setFlashMessage('error', $e->getMessage());
+            $this->redirect('/progress/index');
         }
-
-        if ($this->isInvalidId($id)) {
-            $this->redirectWithError('Invalid progress ID.');
-            return;
-        }
-
-        $progress = $this->progressModel->getProgressById($id);
-        if ($progress) {
-            $progress = $this->formatProgressMetrics($progress);
-            $this->renderView('../../views/progress/show.php', ['progress' => $progress]);
-        } else {
-            $this->redirectWithError('No progress found for the given ID.');
-        }
-    }
-
-    private function isInvalidId(int $id): bool {
-        return $id <= 0;
-    }
-
-    private function redirectWithError(string $message): void {
-        $_SESSION['error_message'] = $message;
-        $this->redirect('../../views/error/error.php');
-    }
-
-    protected function redirect($url): void {
-        header("Location: $url");
-        exit();
-    }
-
-    private function renderView(string $viewPath, array $data): void {
-        if (!file_exists($viewPath) || !is_readable($viewPath)) {
-            $this->redirectWithError("View template not found at: $viewPath");
-            return;
-        }
-        extract($data);
-        include $viewPath;
-    }
-
-    private function formatProgressMetrics(array $progress): array {
-        $progress['weight_change'] = $progress['end_weight'] - $progress['start_weight'];
-        $progress['workout_achievements'] = $this->formatWorkoutAchievements($progress['workouts']);
-        return $progress;
-    }
-
-    private function formatWorkoutAchievements(array $workouts): string {
-        return implode(', ', $workouts);
-    }
-
-    private function isUserAuthorized(): bool {
-        return isset($_SESSION['user_id']) && $_SESSION['user_id'] === $this->progressModel->getUserId();
     }
 }

@@ -1,101 +1,60 @@
 <?php
-require_once '../../models/UserModel.php';
-require_once '../../models/ProgressModel.php';
-require_once '../../controllers/BaseController.php';
-require_once '../../../config/database.php';
+// app/controllers/UserController/ProfileController.php
+require_once __DIR__ . '/../../models/UserModel.php';
+require_once __DIR__ . '/../../models/ProgressModel.php';
+require_once __DIR__ . '/../../controllers/BaseController.php';
+require_once __DIR__ . '/../../../config/database.php';
+
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 
 class ProfileController extends BaseController {
     private UserModel $userModel;
     private ProgressModel $progressModel;
+    private Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
         $this->userModel = new UserModel($pdo);
         $this->progressModel = new ProgressModel($pdo);
+        $this->logger = new Logger('ProfileController');
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../../logs/app.log', Logger::INFO));
+        $this->requireAuth();
     }
 
     public function show(int $id): void {
-        if (!$this->isUserAuthenticated()) {
-            $this->redirectWithError('Unauthorized access.');
-            return;
-        }
-
-        if ($this->isInvalidId($id)) {
-            $this->redirectWithError('Invalid user ID.');
-            return;
-        }
-
-        $user = $this->userModel->getUserById($id);
-        if (!$user) {
-            $this->redirectWithError('User  not found.');
-            return;
-        }
-
-        $user = $this->formatUserData($user);
-        $progress = $this->progressModel->getOverallProgressStatistics();
-        $this->renderView('../../views/user/profile.php', ['user' => $user, 'progress' => $progress]);
-    }
-
-    public function update(int $id, array $data): void {
-        if (!$this->isUserAuthenticated()) {
-            $this->redirectWithError('Unauthorized access.');
-            return;
-        }
-
-        if ($this->isInvalidId($id)) {
-            $this->redirectWithError('Invalid user ID.');
-            return;
-        }
-
-        if (!$this->validateUserData($data)) {
-            $this->redirectWithError('Validation failed. Please check the input data.');
-            return;
-        }
-
         try {
-            $this->userModel->updateUser ($id, $data);
-            $_SESSION['success_message'] = 'User  updated successfully.';
-            $this->redirect("../../views/user/profile.php?id=$id");
+            if ($id <= 0 || $id !== (int)$_SESSION['user_id']) {
+                throw new Exception('You can only view your own profile.');
+            }
+
+            $user = $this->userModel->getUserById($id);
+            if (!$user) {
+                throw new Exception('User not found.');
+            }
+
+            $progress = $this->progressModel->getOverallProgressStatistics($id);
+            $this->render(__DIR__ . '/../../views/user/profile.php', [
+                'user' => $this->formatUserData($user),
+                'progress' => $progress,
+                'csrf_token' => $this->generateCsrfToken(),
+                'execution_time' => microtime(true) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true))
+            ]);
         } catch (Exception $e) {
-            error_log('Update failed: ' . $e->getMessage());
-            $this->redirectWithError('Failed to update user. Please try again.');
+            $this->logger->error("Profile fetch error", [
+                'message' => $e->getMessage(),
+                'id' => $id,
+                'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->setFlashMessage('error', $e->getMessage());
+            $this->redirect('/auth/login');
         }
-    }
-
-    private function isInvalidId(int $id): bool {
-        return $id <= 0;
-    }
-
-    private function validateUserData(array $data): bool {
-        return isset($data['name'], $data['email']) && filter_var($data['email'], FILTER_VALIDATE_EMAIL);
-    }
-
-    private function redirectWithError(string $message): void {
-        $_SESSION['error_message'] = $message;
-        $this->redirect('../../views/error.php');
-    }
-
-    protected function redirect($url): void {
-        header("Location: $url");
-        exit();
-    }
-
-    private function renderView(string $viewPath, array $data): void {
-        if (!file_exists($viewPath) || !is_readable($viewPath)) {
-            $this->redirectWithError("View template not found at: $viewPath");
-            return;
-        }
-        extract($data);
-        include $viewPath;
     }
 
     private function formatUserData(array $user): array {
-        // Example formatting logic for user data
-        $user['full_name'] = strtoupper($user['name']);
+        $user['display_name'] = ucwords($user['username']);
+        $user['joined'] = date('F j, Y', strtotime($user['created_at']));
         return $user;
-    }
-
-    private function isUserAuthenticated(): bool {
-        return isset($_SESSION['user_id']);
     }
 }

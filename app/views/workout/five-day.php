@@ -1,45 +1,12 @@
 <?php
+session_start();
+if (!isset($_SESSION['user_id'])) {
+    header('Location: /login');
+    exit;
+}
 
-$pageTitle = '5-Day Workout Plan - Fitness Tracker';
-
-// In a real application, you would fetch this data from a database
-$workout_plan = [
-    'Monday' => [
-        ['name' => 'Bench Press', 'sets' => 4, 'reps' => '8-10'],
-        ['name' => 'Incline Dumbbell Press', 'sets' => 3, 'reps' => '10-12'],
-        ['name' => 'Chest Flyes', 'sets' => 3, 'reps' => '12-15'],
-        ['name' => 'Tricep Pushdowns', 'sets' => 3, 'reps' => '12-15'],
-        ['name' => 'Overhead Tricep Extensions', 'sets' => 3, 'reps' => '12-15']
-    ],
-    'Tuesday' => [
-        ['name' => 'Deadlifts', 'sets' => 4, 'reps' => '6-8'],
-        ['name' => 'Pull-ups', 'sets' => 3, 'reps' => '8-10'],
-        ['name' => 'Barbell Rows', 'sets' => 3, 'reps' => '8-10'],
-        ['name' => 'Face Pulls', 'sets' => 3, 'reps' => '12-15'],
-        ['name' => 'Hammer Curls', 'sets' => 3, 'reps' => '12-15']
-    ],
-    'Wednesday' => [
-        ['name' => 'Squats', 'sets' => 4, 'reps' => '8-10'],
-        ['name' => 'Leg Press', 'sets' => 3, 'reps' => '10-12'],
-        ['name' => 'Leg Extensions', 'sets' => 3, 'reps' => '12-15'],
-        ['name' => 'Leg Curls', 'sets' => 3, 'reps' => '12-15'],
-        ['name' => 'Calf Raises', 'sets' => 4, 'reps' => '15-20']
-    ],
-    'Thursday' => [
-        ['name' => 'Overhead Press', 'sets' => 4, 'reps' => '8-10'],
-        ['name' => 'Lateral Raises', 'sets' => 3, 'reps' => '12-15'],
-        ['name' => 'Front Raises', 'sets' => 3, 'reps' => '12-15'],
-        ['name' => 'Upright Rows', 'sets' => 3, 'reps' => '10-12'],
-        ['name' => 'Shrugs', 'sets' => 3, 'reps' => '12-15']
-    ],
-    'Friday' => [
-        ['name' => 'Barbell Curls', 'sets' => 3, 'reps' => '8-10'],
-        ['name' => 'Preacher Curls', 'sets' => 3, 'reps' => '10-12'],
-        ['name' => 'Skull Crushers', 'sets' => 3, 'reps' => '10-12'],
-        ['name' => 'Dips', 'sets' => 3, 'reps' => '10-12'],
-        ['name' => 'Cable Curls', 'sets' => 3, 'reps' => '12-15']
-    ]
-];
+// C:\xampp\htdocs\fitness-app\app\views\workout\five-day.php
+$pageTitle = '5-Day Workout Split - Fitness Tracker';
 ?>
 
 <!DOCTYPE html>
@@ -48,53 +15,46 @@ $workout_plan = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $pageTitle; ?></title>
+    <title><?php echo htmlspecialchars($pageTitle); ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+    body {
+        font-family: 'Poppins', sans-serif;
+        background: linear-gradient(135deg, #f0f2f5, #e9ecef);
+        min-height: 100vh;
+    }
+    </style>
 </head>
 
-<body class="bg-gray-100 font-sans">
-    <header class="bg-white shadow-md">
-        <nav class="container mx-auto px-6 py-3">
-            <div class="flex justify-between items-center">
-                <a href="index.php" class="text-2xl font-bold text-gray-800">Fitness Tracker</a>
-                <div class="space-x-4">
-                    <a href="dashboard.php" class="text-gray-600 hover:text-blue-500">Dashboard</a>
-                    <a href="workout_index.php" class="text-blue-500 font-semibold">Workouts</a>
-                    <a href="nutrition_index.php" class="text-gray-600 hover:text-blue-500">Nutrition</a>
-                    <a href="progress_index.php" class="text-gray-600 hover:text-blue-500">Progress</a>
-                    <a href="logout.php" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600">Logout</a>
-                </div>
-            </div>
-        </nav>
-    </header>
+<body class="bg-gray-100">
+    <div class="container mx-auto py-8">
+        <h1 class="text-3xl font-bold mb-6 animate__animated animate__fadeIn">5-Day Workout Split</h1>
 
-    <main class="container mx-auto px-6 py-8">
-        <h1 class="text-3xl font-bold text-gray-800 mb-8">5-Day Workout Plan</h1>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <?php foreach ($workout_plan as $day => $exercises): ?>
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-xl font-semibold text-gray-800 mb-4"><?php echo $day; ?></h2>
-                <ul class="space-y-2">
-                    <?php foreach ($exercises as $exercise): ?>
-                    <li class="flex justify-between items-center">
-                        <span class="text-gray-700"><?php echo $exercise['name']; ?></span>
-                        <span class="text-gray-500"><?php echo $exercise['sets']; ?> x
-                            <?php echo $exercise['reps']; ?></span>
-                    </li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-            <?php endforeach; ?>
+        <div class="card shadow-sm p-6 animate__animated animate__fadeInUp">
+            <h2 class="text-2xl font-semibold mb-4">Overview</h2>
+            <p>This is a 5-day split focusing on different muscle groups each day:</p>
+            <ul class="list-group mb-4">
+                <li class="list-group-item">Day 1: Chest (Bench Press, Incline Flyes - 3 sets, 10-12 reps)</li>
+                <li class="list-group-item">Day 2: Back (Deadlifts, Pull-Ups - 3 sets, 8-10 reps)</li>
+                <li class="list-group-item">Day 3: Shoulders (Military Press, Lateral Raises - 3 sets, 12-15 reps)</li>
+                <li class="list-group-item">Day 4: Legs (Squats, Leg Press - 4 sets, 10-12 reps)</li>
+                <li class="list-group-item">Day 5: Arms (Bicep Curls, Tricep Dips - 3 sets, 12-15 reps)</li>
+            </ul>
+            <p><strong>Duration:</strong> Approx. 60-75 minutes per session</p>
+            <p><strong>Calories Burned:</strong> Approx. 400-600 kcal per session</p>
         </div>
-    </main>
 
-    <footer class="bg-gray-800 text-white py-4 mt-8">
-        <div class="container mx-auto px-6 text-center">
-            <p>&copy; 2025 Fitness Tracker. All rights reserved.</p>
+        <div class="mt-6">
+            <a href="/workout/index" class="btn btn-primary">Back to Workouts</a>
+            <!-- Optionally, add a button to save this as a custom workout -->
+            <a href="/workout/create" class="btn btn-outline-primary">Customize This Plan</a>
         </div>
-    </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

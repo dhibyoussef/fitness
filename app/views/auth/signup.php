@@ -1,13 +1,9 @@
 <?php
 session_start();
-$pageTitle = 'Sign Up - Fitness Tracker';
-$errorMessage = '';
 
-if (isset($_POST['signup'])) {
-    $name = $_POST['name'];
-    $email = $_POST['email'];
-    $password = $_POST['password'];
-}
+
+// C:\xampp\htdocs\fitness-app\app\views\auth\signup.php
+$pageTitle = 'Sign Up - Fitness Tracker';
 ?>
 
 <!DOCTYPE html>
@@ -16,146 +12,84 @@ if (isset($_POST['signup'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $pageTitle; ?></title>
+    <title><?php echo htmlspecialchars($pageTitle); ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/react@17.0.2/umd/react.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/babel-standalone@6.26.0/babel.min.js"></script>
+    <style>
+    body {
+        font-family: 'Poppins', sans-serif;
+        background: linear-gradient(135deg, #f0f2f5, #e9ecef);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .signup-container {
+        max-width: 400px;
+        width: 100%;
+    }
+    </style>
 </head>
 
-<body class="bg-gray-100 font-sans">
-    <div id="app"></div>
-
-    <script type="text/babel">
-        const Header = () => (
-            <header className="bg-white shadow-md">
-                <nav className="container mx-auto px-6 py-3">
-                    <div className="flex justify-between items-center">
-                        <a href="../../../index.php" className="text-2xl font-bold text-gray-800">Fitness Tracker</a>
-                    </div>
-                </nav>
-            </header>
-        );
-
-        const SignUpForm = () => {
-            const [name, setName] = React.useState('');
-            const [email, setEmail] = React.useState('');
-            const [password, setPassword] = React.useState('');
-            const [confirmPassword, setConfirmPassword] = React.useState('');
-
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                // Here you would typically send the sign-up data to your server
-                console.log('Sign up submitted:', { name, email, password, confirmPassword });
-            };
-
-            return (
-                <div className="min-h-screen flex items-center justify-center bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-                    <div className="max-w-md w-full space-y-8">
-                        <div>
-                            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Create your account</h2>
-                        </div>
-                        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                            <input type="hidden" name="remember" value="true" />
-                            <div className="rounded-md shadow-sm -space-y-px">
-                                <div>
-                                    <label htmlFor="name" className="sr-only">Full name</label>
-                                    <input
-                                        id="name"
-                                        name="name"
-                                        type="text"
-                                        required
-                                        className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                                        placeholder="Full name"
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="email-address" className="sr-only">Email address</label>
-                                    <input
-                                        id="email-address"
-                                        name="email"
-                                        type="email"
-                                        autoComplete="email"
-                                        required
-                                        className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                                        placeholder="Email address"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="password" className="sr-only">Password</label>
-                                    <input
-                                        id="password"
-                                        name="password"
-                                        type="password"
-                                        autoComplete="new-password"
-                                        required
-                                        className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                                        placeholder="Password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="confirm-password" className="sr-only">Confirm password</label>
-                                    <input
-                                        id="confirm-password"
-                                        name="confirm-password"
-                                        type="password"
-                                        autoComplete="new-password"
-                                        required
-                                        className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                                        placeholder="Confirm password"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <button
-                                    type="submit"
-                                    className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                >
-                                    Sign up
-                                </button>
-                            </div>
-                        </form>
-                        <p className="mt-2 text-center text-sm text-gray-600">
-                            Already have an account?{' '}
-                            <a href="login.php" className="font-medium text-blue-600 hover:text-blue-500">
-                                Sign in
-                            </a>
-                        </p>
-                    </div>
-                </div>
-            );
-        };
-
-        const Footer = () => (
-            <footer className="bg-gray-800 text-white py-4">
-                <div className="container mx-auto px-6 text-center">
-                    <p>&copy; 2025 Fitness Tracker. All rights reserved.</p>
-                </div>
-            </footer>
-        );
-
-        const App = () => (
-            <div className="flex flex-col min-h-screen">
-                <Header />
-                <main className="flex-grow">
-                    <SignUpForm />
-                </main>
-                <Footer />
+<body class="bg-gray-100">
+    <header class="bg-white shadow-md dark-mode:bg-gray-800 fixed top-0 w-full z-10">
+        <nav class="container mx-auto px-6 py-3">
+            <div class="flex justify-between items-center">
+                <a href="/" class="text-2xl font-bold text-gray-800 dark-mode:text-white">Fitness Tracker</a>
             </div>
-        );
+        </nav>
+    </header>
+    <form method="POST" action="../../../app/controllers/AuthController/SignupController.php">
+        <div class="signup-container">
+            <div class="card shadow-lg p-6 animate__animated animate__fadeIn">
+                <h1 class="text-3xl font-bold text-center mb-6">Sign Up</h1>
 
-        ReactDOM.render(<App />, document.getElementById('app'));
-    </script>
+                <?php if ($error = isset($_SESSION['flash_messages']['error']) ? $_SESSION['flash_messages']['error'] : null): ?>
+                <div class="alert alert-danger animate__animated animate__shakeX">
+                    <?php echo htmlspecialchars($error); ?>
+                </div>
+                <?php endif; ?>
+                <?php if ($success = isset($_SESSION['flash_messages']['success']) ? $_SESSION['flash_messages']['success'] : null): ?>
+                <div class="alert alert-success animate__animated animate__fadeIn">
+                    <?php echo htmlspecialchars($success); ?>
+                </div>
+                <?php endif; ?>
+
+                <form method="POST" action="/auth/signup">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+
+                    <div class="mb-4">
+                        <label for="name" class="form-label">Username</label>
+                        <input type="text" name="name" id="name" class="form-control" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" name="email" id="email" class="form-control" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" name="password" id="password" class="form-control" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">Sign Up</button>
+                </form>
+
+                <p class="text-center mt-4">
+                    Already have an account? <a href="../../views/auth/login.php"
+                        class="text-blue-500 hover:underline">Login</a>
+                </p>
+                <p class="text-center">
+                    <a href="/" class="text-gray-600 hover:underline">Back to Home</a>
+                </p>
+            </div>
+        </div>
+    </form>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

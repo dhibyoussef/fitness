@@ -1,0 +1,17 @@
+{
+    "name": "youss/fitness-app",
+    "autoload": {
+        "psr-4": {
+            "Youss\\FitnessApp\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "dhibyoussef",
+            "email": "youssefdhib28@gmail.com"
+        }
+    ],
+    "require": {
+        "monolog/monolog": "^3.8"
+    }
+}

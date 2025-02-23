@@ -1,115 +1,96 @@
 <?php
+// app/views/admin/user_management.php
+session_start();
+require_once __DIR__ . '../../../app/models/UserModel.php';
+require_once __DIR__ . '../../../app/models/AdminModel.php';
 
-$pageTitle = 'User Management - Fitness Tracker';
+if (!isset($_SESSION['admin'])) {
+    header('Location: /admin/login');
+    exit;
+}
+
+$userModel = new UserModel($pdo);
+$users = $userModel->getAllUsers(10, 0);
+$currentPage = isset($_GET['page']) ? intval($_GET['page']) : 1;
+$search = isset($_GET['search']) ? $_GET['search'] : '';
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $pageTitle; ?></title>
+    <title>User Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/react@17.0.2/umd/react.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/babel-standalone@6.26.0/babel.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
 </head>
 
-<body class="bg-gray-100 font-sans">
-    <div id="app"></div>
+<body class="bg-gray-100">
+    <div class="container mx-auto py-8">
+        <h1 class="text-3xl font-bold mb-6 animate__animated animate__fadeIn">User Management</h1>
 
-    <script type="text/babel">
-        const Header = () => (
-            <header className="bg-white shadow-md">
-                <nav className="container mx-auto px-6 py-3">
-                    <div className="flex justify-between items-center">
-                        <a href="index.php" className="text-2xl font-bold text-gray-800">Fitness Tracker</a>
-                        <div className="space-x-4">
-                            <a href="dashboard.php" className="text-gray-600 hover:text-blue-500">Dashboard</a>
-                            <a href="user_management.php" className="text-blue-500 font-semibold">User Management</a>
-                            <a href="logout.php" className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600">Logout</a>
-                        </div>
-                    </div>
-                </nav>
-            </header>
-        );
+        <form method="GET" class="mb-4 animate__animated animate__fadeInUp">
+            <div class="input-group">
+                <input type="text" name="search" value="<?php echo htmlspecialchars($search); ?>" class="form-control"
+                    placeholder="Search users...">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
 
-        const UserTable = ({ users, onEdit, onDelete }) => (
-            <table className="min-w-full bg-white">
+        <form method="POST" action="/admin/users/bulk_activate" id="bulkForm"
+            class="animate__animated animate__fadeInUp">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+            <table class="table table-striped">
                 <thead>
                     <tr>
-                        <th className="py-2 px-4 border-b">ID</th>
-                        <th className="py-2 px-4 border-b">Name</th>
-                        <th className="py-2 px-4 border-b">Email</th>
-                        <th className="py-2 px-4 border-b">Role</th>
-                        <th className="py-2 px-4 border-b">Actions</th>
+                        <th><input type="checkbox" id="selectAll"></th>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {users.map(user => (
-                        <tr key={user.id}>
-                            <td className="py-2 px-4 border-b">{user.id}</td>
-                            <td className="py-2 px-4 border-b">{user.name}</td>
-                            <td className="py-2 px-4 border-b">{user.email}</td>
-                            <td className="py-2 px-4 border-b">{user.role}</td>
-                            <td className="py-2 px-4 border-b">
-                                <button onClick={() => onEdit(user)} className="text-blue-500 hover:text-blue-700 mr-2">Edit</button>
-                                <button onClick={() => onDelete(user.id)} className="text-red-500 hover:text-red-700">Delete</button>
-                            </td>
-                        </tr>
-                    ))}
+                    <?php foreach ($users as $user): ?>
+                    <tr class="animate__animated animate__fadeIn"
+                        style="animation-delay: <?php echo htmlspecialchars(($user['id'] % 10) * 0.1); ?>s;">
+                        <td><input type="checkbox" name="user_ids[]" value="<?php echo $user['id']; ?>"
+                                class="userCheckbox"></td>
+                        <td><?php echo htmlspecialchars($user['id']); ?></td>
+                        <td><?php echo htmlspecialchars($user['username']); ?></td>
+                        <td><?php echo htmlspecialchars($user['email']); ?></td>
+                        <td><?php echo htmlspecialchars($user['role']); ?></td>
+                        <td><?php echo htmlspecialchars($user['status']); ?></td>
+                        <td>
+                            <a href="/admin/users/<?php echo $user['id']; ?>" class="btn btn-sm btn-info">View</a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
-        );
+            <button type="submit" class="btn btn-success">Activate Selected</button>
+        </form>
 
-        const UserManagement = () => {
-            const [users, setUsers] = React.useState([
-                { id: 1, name: 'John Doe', email: 'john@example.com', role: 'user' },
-                { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'admin' },
-                // Add more mock data as needed
-            ]);
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                <li class="page-item <?php echo $i === $currentPage ? 'active' : ''; ?>">
+                    <a class="page-link"
+                        href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>"><?php echo $i; ?></a>
+                </li>
+                <?php endfor; ?>
+            </ul>
+        </nav>
+    </div>
 
-            const handleEdit = (user) => {
-                // Implement edit functionality
-                console.log('Edit user:', user);
-            };
-
-            const handleDelete = (userId) => {
-                // Implement delete functionality
-                setUsers(users.filter(user => user.id !== userId));
-            };
-
-            return (
-                <div className="container mx-auto px-6 py-8">
-                    <h1 className="text-3xl font-bold text-gray-800 mb-8">User Management</h1>
-                    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                        <UserTable users={users} onEdit={handleEdit} onDelete={handleDelete} />
-                    </div>
-                </div>
-            );
-        };
-
-        const Footer = () => (
-            <footer className="bg-gray-800 text-white py-4">
-                <div className="container mx-auto px-6 text-center">
-                    <p>&copy; 2025 Fitness Tracker. All rights reserved.</p>
-                </div>
-            </footer>
-        );
-
-        const App = () => (
-            <div className="flex flex-col min-h-screen">
-                <Header />
-                <main className="flex-grow">
-                    <UserManagement />
-                </main>
-                <Footer />
-            </div>
-        );
-
-        ReactDOM.render(<App />, document.getElementById('app'));
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.getElementById('selectAll').addEventListener('change', function() {
+        document.querySelectorAll('.userCheckbox').forEach(cb => cb.checked = this.checked);
+    });
     </script>
 </body>
 

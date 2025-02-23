@@ -1,65 +1,69 @@
 <?php
-require_once '../../models/UserModel.php';
-require_once '../../controllers/BaseController.php';
-require_once '../../../config/database.php';
+// app/controllers/UserController/DeleteController.php
+require_once __DIR__ . '/../../models/UserModel.php';
+require_once __DIR__ . '/../../controllers/BaseController.php';
+require_once __DIR__ . '/../../../config/database.php';
+
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 
 class DeleteController extends BaseController {
     private UserModel $userModel;
+    private Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
         $this->userModel = new UserModel($pdo);
+        $this->logger = new Logger('UserDeleteController');
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../../logs/app.log', Logger::INFO));
+        $this->requireAuth();
     }
 
     public function delete(int $id): void {
-        if (!$this->isUserAuthorized($id)) {
-            $this->redirectWithError('Unauthorized access.');
-            return;
-        }
-
-        if ($this->isInvalidId($id)) {
-            $this->redirectWithError('Invalid user ID.');
-            return;
-        }
-
-        if (!$this->confirmDeletion()) {
-            $this->redirectWithError('Deletion not confirmed.');
-            return;
-        }
-
         try {
-            if ($this->userModel->deleteUser ($id)) {
-                $_SESSION['success_message'] = 'User  deleted successfully.';
-                $this->redirect('../../../index.php');
+            if ($id <= 0) {
+                throw new Exception('Invalid user ID.');
+            }
+
+            if ($id !== (int)$_SESSION['user_id']) {
+                throw new Exception('You can only delete your own account.');
+            }
+
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                $this->render(__DIR__ . '/../../views/user/delete.php', [
+                    'id' => $id,
+                    'csrf_token' => $this->generateCsrfToken()
+                ]);
+                return;
+            }
+
+            if (!$this->isValidCsrfToken($_POST['csrf_token'] ?? '')) {
+                throw new Exception('Invalid security token.');
+            }
+
+            if (!isset($_POST['confirm']) || $_POST['confirm'] !== 'yes') {
+                throw new Exception('Deletion not confirmed.');
+            }
+
+            if ($this->userModel->deleteUser($id)) {
+                $this->logger->info("User deleted", ['id' => $id]);
+                session_unset();
+                session_destroy();
+                setcookie(session_name(), '', time() - 3600, '/');
+                $this->setFlashMessage('success', 'Account deleted successfully.');
+                $this->redirect('/');
             } else {
-                $this->redirectWithError('Failed to delete user. Please try again.');
+                throw new Exception('Failed to delete account.');
             }
         } catch (Exception $e) {
-            error_log('User  deletion failed: ' . $e->getMessage());
-            $this->redirectWithError('An error occurred while deleting the user. Please try again later.');
+            $this->logger->error("Deletion error", [
+                'message' => $e->getMessage(),
+                'id' => $id,
+                'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->setFlashMessage('error', $e->getMessage());
+            $this->redirect('/user/profile');
         }
-    }
-
-    private function isInvalidId(int $id): bool {
-        return $id <= 0;
-    }
-
-    private function isUserAuthorized(int $id): bool {
-        return isset($_SESSION['user_id']) && $_SESSION['user_id'] === $id;
-    }
-
-    private function confirmDeletion(): bool {
-        return isset($_POST['confirm']) && strtolower(trim($_POST['confirm'])) === 'yes';
-    }
-
-    private function redirectWithError(string $message): void {
-        $_SESSION['error_message'] = $message;
-        header('Location: ../../views/error.php');
-        exit();
-    }
-
-    protected function redirect($url): void {
-        header("Location: $url");
-        exit();
     }
 }

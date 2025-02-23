@@ -1,14 +1,11 @@
 <?php
 session_start();
-$pageTitle = 'Login - Fitness Tracker';
-$errorMessage = '';
 
-if (isset($_POST['login'])) {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
-    
-    require_once '../../controllers/AuthController/LoginController.php';
-}
+// C:\xampp\htdocs\fitness-app\app\views\auth\login.php
+$pageTitle = 'Login - Fitness Tracker';
+
+// Check if the user is already logged in
+
 ?>
 
 <!DOCTYPE html>
@@ -17,140 +14,87 @@ if (isset($_POST['login'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $pageTitle; ?></title>
+    <title><?php echo htmlspecialchars($pageTitle); ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/react@17.0.2/umd/react.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/babel-standalone@6.26.0/babel.min.js"></script>
+    <style>
+    body {
+        font-family: 'Poppins', sans-serif;
+        background: linear-gradient(135deg, #f0f2f5, #e9ecef);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .login-container {
+        max-width: 400px;
+        width: 100%;
+    }
+    </style>
 </head>
 
-<body class="bg-gray-100 font-sans">
-    <div id="app"></div>
 
-    <script type="text/babel">
-        const Header = () => (
-            <header className="bg-white shadow-md">
-                <nav className="container mx-auto px-6 py-3">
-                    <div className="flex justify-between items-center">
-                        <a href="../../../index.php" className="text-2xl font-bold text-gray-800">Fitness Tracker</a>
-                    </div>
-                </nav>
-            </header>
-        );
-
-        const LoginForm = () => {
-            const [email, setEmail] = React.useState('');
-            const [password, setPassword] = React.useState('');
-
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                // Here you would typically send the login data to your server
-                console.log('Login submitted:', { email, password });
-            };
-
-            return (
-                <div className="min-h-screen flex items-center justify-center bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-                    <div className="max-w-md w-full space-y-8">
-                        <div>
-                            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Sign in to your account</h2>
-                        </div>
-                        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                            <input type="hidden" name="remember" value="true" />
-                            <div className="rounded-md shadow-sm -space-y-px">
-                                <div>
-                                    <label htmlFor="email-address" className="sr-only">Email address</label>
-                                    <input
-                                        id="email-address"
-                                        name="email"
-                                        type="email"
-                                        autoComplete="email"
-                                        required
-                                        className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                                        placeholder="Email address"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="password" className="sr-only">Password</label>
-                                    <input
-                                        id="password"
-                                        name="password"
-                                        type="password"
-                                        autoComplete="current-password"
-                                        required
-                                        className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                                        placeholder="Password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                    <input
-                                        id="remember-me"
-                                        name="remember-me"
-                                        type="checkbox"
-                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                    />
-                                    <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                                        Remember me
-                                    </label>
-                                </div>
-
-                                <div className="text-sm">
-                                    <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
-                                        Forgot your password?
-                                    </a>
-                                </div>
-                            </div>
-
-                            <div>
-                                <button
-                                    type="submit"
-                                    name="login"
-                                    value="login"
-                                    href="../../controllers/AuthController/LoginController.php"
-                                    className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                >
-                                    Sign in
-                                </button>
-                            </div>
-                        </form>
-                        <p className="mt-2 text-center text-sm text-gray-600">
-                            Or{' '}
-                            <a href="../../views/auth/signup.php" className="font-medium text-blue-600 hover:text-blue-500">
-                                Sign up
-                            </a>
-                        </p>
-                    </div>
-                </div>
-            );
-        };
-
-        const Footer = () => (
-            <footer className="bg-gray-800 text-white py-4">
-                <div className="container mx-auto px-6 text-center">
-                    <p>&copy; 2025 Fitness Tracker. All rights reserved.</p>
-                </div>
-            </footer>
-        );
-
-        const App = () => (
-            <div className="flex flex-col min-h-screen">
-                <Header />
-                <main className="flex-grow">
-                    <LoginForm />
-                </main>
-                <Footer />
+<body
+    class="bg-gray-100 flex flex-col <?php echo (isset($_SESSION['dark_mode']) && $_SESSION['dark_mode']) ? 'dark-mode' : ''; ?>">
+    <header class="bg-white shadow-md dark-mode:bg-gray-800 fixed top-0 w-full z-10">
+        <nav class="container mx-auto px-6 py-3">
+            <div class="flex justify-between items-center">
+                <a href="/" class="text-2xl font-bold text-gray-800 dark-mode:text-white">Fitness Tracker</a>
             </div>
-        );
+        </nav>
+    </header>
+    <form method="POST" action="../../../app/controllers/AuthController/LoginController.php">
+        <div class="login-container">
+            <div class="card shadow-lg p-6 animate__animated animate__fadeIn">
+                <h1 class="text-3xl font-bold text-center mb-6">Login</h1>
 
-        ReactDOM.render(<App />, document.getElementById('app'));
-    </script>
+                <?php if ($error = isset($_SESSION['flash_messages']['error']) ? $_SESSION['flash_messages']['error'] : null): ?>
+                <div class="alert alert-danger animate__animated animate__shakeX">
+                    <?php echo htmlspecialchars($error); ?>
+                </div>
+                <?php endif; ?>
+                <?php if ($success = isset($_SESSION['flash_messages']['success']) ? $_SESSION['flash_messages']['success'] : null): ?>
+                <div class="alert alert-success animate__animated animate__fadeIn">
+                    <?php echo htmlspecialchars($success); ?>
+                </div>
+                <?php endif; ?>
+
+                <form method="POST" action="/auth/login">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+
+                    <div class="mb-4">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" name="email" id="email" class="form-control" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" name="password" id="password" class="form-control" required>
+                    </div>
+
+                    <div class="mb-4 form-check">
+                        <input type="checkbox" name="remember_me" id="remember_me" class="form-check-input">
+                        <label for="remember_me" class="form-check-label">Remember Me</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">Login</button>
+                </form>
+
+                <p class="text-center mt-4">
+                    Don’t have an account? <a href="signup.php" class="text-blue-500 hover:underline">Sign
+                        Up</a>
+                </p>
+                <p class="text-center">
+                    <a href="/" class="text-gray-600 hover:underline">Back to Home</a>
+                </p>
+            </div>
+        </div>
+    </form>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

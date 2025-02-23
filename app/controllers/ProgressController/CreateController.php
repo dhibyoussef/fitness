@@ -1,81 +1,73 @@
 <?php
-require_once '../../models/ProgressModel.php';
-require_once '../../controllers/BaseController.php';
-require_once '../../../config/database.php';
+// app/controllers/ProgressController/CreateController.php
+require_once __DIR__ . '/../../models/ProgressModel.php';
+require_once __DIR__ . '/../../controllers/BaseController.php';
+require_once __DIR__ . '/../../../config/database.php';
+
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
 
 class CreateController extends BaseController {
     private ProgressModel $progressModel;
+    private Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
         $this->progressModel = new ProgressModel($pdo);
+        $this->logger = new Logger('ProgressCreateController');
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../../logs/app.log', Logger::INFO));
+        $this->requireAuth();
     }
 
     public function create(array $data): void {
-        if (!$this->isUserAuthenticated()) {
-            $this->redirectWithError('Unauthorized access. Please login to log your progress.');
-            return;
-        }
-
-        if (!$this->isValidData($data)) {
-            $this->redirectWithError('Please ensure all measurements are valid and within reasonable ranges.');
-            return;
-        }
-
         try {
-            $this->progressModel->createProgress($data);
-            $_SESSION['success_message'] = 'Progress logged successfully! Keep up the great work!';
-            header("Location: ../../views/progress/confirmation.php");
-            exit();
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$this->isValidCsrfToken($data['csrf_token'] ?? '')) {
+                throw new Exception('Invalid request or security token.');
+            }
+
+            $this->validateData($data);
+            $sanitizedData = [
+                'user_id' => (int)$_SESSION['user_id'],
+                'weight' => (float)$data['weight'],
+                'body_fat' => (float)$data['body_fat'],
+                'muscle_mass' => isset($data['muscle_mass']) ? (float)$data['muscle_mass'] : null,
+                'date' => $data['date'] ?? date('Y-m-d'),
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+
+            if ($this->progressModel->createProgress($sanitizedData)) {
+                $this->logger->info("Progress logged", [
+                    'user_id' => $_SESSION['user_id'],
+                    'date' => $sanitizedData['date']
+                ]);
+                $this->setFlashMessage('success', 'Progress logged successfully!');
+                $this->redirect('/progress/index');
+            } else {
+                throw new Exception('Failed to log progress.');
+            }
         } catch (Exception $e) {
-            error_log('Progress creation failed: ' . $e->getMessage());
-            $this->redirectWithError('Unable to log progress. Please try again or contact support if the issue persists.');
+            $this->logger->error("Progress creation error", [
+                'message' => $e->getMessage(),
+                'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->setFlashMessage('error', $e->getMessage());
+            $this->redirect('/progress/create');
         }
     }
 
-    private function isValidData(array $data): bool {
-        // Check if all required fields are present
-        $requiredFields = ['weight', 'muscle_mass', 'body_fat', 'chest', 'waist', 'hips'];
-        foreach ($requiredFields as $field) {
-            if (!isset($data[$field])) {
-                return false;
-            }
+    private function validateData(array $data): void {
+        if (empty($data['weight']) || !is_numeric($data['weight']) || $data['weight'] < 20 || $data['weight'] > 300) {
+            throw new Exception('Weight must be 20-300 kg.');
         }
-
-        // Validate weight (in kg) - between 20kg and 300kg
-        if (!is_numeric($data['weight']) || $data['weight'] < 20 || $data['weight'] > 300) {
-            return false;
+        if (empty($data['body_fat']) || !is_numeric($data['body_fat']) || $data['body_fat'] < 2 || $data['body_fat'] > 50) {
+            throw new Exception('Body fat must be 2-50%.');
         }
-
-        // Validate muscle mass (in kg) - between 10kg and 100kg
-        if (!is_numeric($data['muscle_mass']) || $data['muscle_mass'] < 10 || $data['muscle_mass'] > 100) {
-            return false;
+        if (isset($data['muscle_mass']) && (!is_numeric($data['muscle_mass']) || $data['muscle_mass'] < 10 || $data['muscle_mass'] > 100)) {
+            throw new Exception('Muscle mass must be 10-100 kg if provided.');
         }
-
-        // Validate body fat percentage - between 2% and 50%
-        if (!is_numeric($data['body_fat']) || $data['body_fat'] < 2 || $data['body_fat'] > 50) {
-            return false;
+        if (isset($data['date']) && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['date'])) {
+            throw new Exception('Invalid date format (YYYY-MM-DD).');
         }
-
-        // Validate body measurements (in cm) - between 30cm and 200cm
-        $measurements = ['chest', 'waist', 'hips'];
-        foreach ($measurements as $measurement) {
-            if (!is_numeric($data[$measurement]) || $data[$measurement] < 30 || $data[$measurement] > 200) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private function isUserAuthenticated(): bool {
-        return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
-    }
-
-    private function redirectWithError(string $message): void {
-        $_SESSION['error_message'] = $message;
-        header("Location: ../../views/error/error.php");
-        exit();
     }
 }
-?>
