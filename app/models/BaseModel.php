@@ -26,7 +26,7 @@ class BaseModel {
                 'params' => $params,
                 'message' => $e->getMessage()
             ]);
-            throw $e;
+            throw new Exception("Error fetching single record: " . $e->getMessage(), (int)$e->getCode());
         }
     }
 
@@ -34,14 +34,25 @@ class BaseModel {
         try {
             $stmt = $this->pdo->prepare($query);
             $stmt->execute($params);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if ($result === false) {
+                throw new Exception("No records found.");
+            }
+            return $result;
         } catch (PDOException $e) {
             $this->logger->error("Database fetch all error", [
                 'query' => $query,
                 'params' => $params,
                 'message' => $e->getMessage()
             ]);
-            throw $e;
+            throw new Exception("Error fetching all records: " . $e->getMessage(), (int)$e->getCode());
+        } catch (Exception $e) {
+            $this->logger->error("General fetch all error", [
+                'query' => $query,
+                'params' => $params,
+                'message' => $e->getMessage()
+            ]);
+            throw new Exception("Error fetching all records: " . $e->getMessage(), (int)$e->getCode());
         }
     }
 
@@ -55,7 +66,7 @@ class BaseModel {
                 'params' => $params,
                 'message' => $e->getMessage()
             ]);
-            throw $e;
+            throw new Exception("Error executing query: " . $e->getMessage(), (int)$e->getCode());
         }
     }
 
@@ -76,6 +87,13 @@ class BaseModel {
     protected function rollBack(): void {
         $this->pdo->rollBack();
         $this->logger->debug("Transaction rolled back");
+    }
+
+    protected function fetchPaginated(string $query, array $params = [], int $limit, int $offset): array {
+        $query .= " LIMIT :limit OFFSET :offset";
+        $params['limit'] = $limit;
+        $params['offset'] = $offset;
+        return $this->fetchAll($query, $params);
     }
 
 }

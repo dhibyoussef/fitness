@@ -106,4 +106,42 @@ class NutritionModel extends BaseModel {
         $query = "SELECT COUNT(*) as total_meals, AVG(calories) as avg_calories, SUM(calories) as total_calories FROM meals WHERE user_id = :user_id AND deleted_at IS NULL";
         return $this->fetchSingle($query, ['user_id' => $userId]);
     }
+    public function getNutrition(int $userId, int $currentPage, string $filter): array {
+        $offset = ($currentPage - 1) * 10;
+        $query = "SELECT * FROM meals WHERE user_id = :user_id AND name LIKE :filter AND deleted_at IS NULL ORDER BY created_at DESC LIMIT :offset, 10";
+        return $this->fetchAll($query, ['user_id' => $userId, 'filter' => "%$filter%", 'offset' => $offset]);
+    }
+    public function getTotalPages(int $userId, string $filter): int {
+        $query = "SELECT COUNT(*) FROM meals WHERE user_id = :user_id AND name LIKE :filter AND deleted_at IS NULL";
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute(['user_id' => $userId, 'filter' => "%$filter%"]);
+        return ceil($stmt->fetchColumn() / 10);
+    }
+    public function getAllStats(int $userId): array {
+        $query = "SELECT AVG(calories) as avg_calories, SUM(calories) as total_calories FROM meals WHERE user_id = :user_id AND deleted_at IS NULL";
+        return $this->fetchSingle($query, ['user_id' => $userId]);
+    }
+    public function getTotalProtein(int $userId): array {
+        $query = "SELECT SUM(protein) as total_protein FROM meals WHERE user_id = :user_id AND deleted_at IS NULL";
+        return $this->fetchSingle($query, ['user_id' => $userId]);
+    }
+    public function getTotalCarbs(int $userId): array {
+        $query = "SELECT SUM(carbs) as total_carbs FROM meals WHERE user_id = :user_id AND deleted_at IS NULL";
+        return $this->fetchSingle($query, ['user_id' => $userId]);
+    }
+    public function getTotalFat(int $userId): array {
+        $query = "SELECT SUM(fat) as total_fat FROM meals WHERE user_id = :user_id AND deleted_at IS NULL";
+        return $this->fetchSingle($query, ['user_id' => $userId]);
+    }
+    public function getAllMeals(int $userId): array {
+        $query = "SELECT * FROM meals WHERE user_id = :user_id AND deleted_at IS NULL ORDER BY created_at DESC";
+        return $this->fetchAll($query, ['user_id' => $userId]);
+    }
+    public function getMealById(int $mealId): array {
+        $query = "SELECT * FROM meals WHERE id = :id AND deleted_at IS NULL";
+        return $this->fetchSingle($query, ['id' => $mealId]);
+    }
+
+
+    
 }

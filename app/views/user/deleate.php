@@ -1,13 +1,14 @@
 <?php
-session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login');
-    exit;
-}
 
-require_once __DIR__ . '../../../app/models/UserModel.php';
+session_start();
+require_once __DIR__ . '/../../models/UserModel.php';
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+]);
+$userId = 3;
 $userModel = new UserModel($pdo);
-$user = $userModel->getUserById($_SESSION['user_id']);
+$user = $userModel->getUserById($userId);
 ?>
 <!DOCTYPE html>
 <html lang="en">

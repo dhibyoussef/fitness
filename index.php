@@ -5,7 +5,7 @@ require_once __DIR__ . '/config/config.php'; // Load config for BASE_URL and con
 require_once __DIR__ . '/config/database.php'; // Load database connection
 require_once __DIR__ . '/app/controllers/BaseController.php'; // Load BaseController for rendering
 
-$pdo = Database::getInstance();
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', ''); // Update with your DB credentials
 $baseController = new BaseController($pdo);
 $pageTitle = 'Fitness Tracker - Home';
 

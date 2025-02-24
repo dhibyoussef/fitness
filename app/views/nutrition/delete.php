@@ -1,13 +1,17 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login');
-    exit;
-}
-require_once __DIR__ . '../../../app/models/NutritionModel.php';
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+]);
+$userId = 3;
+$nutritionId = 1;
+$name = "kos";
+
+require_once __DIR__ . '/../../models/NutritionModel.php';
 
 $nutritionModel = new NutritionModel($pdo);
-$nutrition = $nutritionModel->getNutritionById( $_SESSION['user_id']);
+$nutrition = $nutritionModel->getNutritionById($nutritionId);
 
 
 // app/views/nutrition/delete.php

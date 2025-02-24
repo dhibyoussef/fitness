@@ -12,7 +12,7 @@ use Monolog\Handler\StreamHandler;
 $logger = new Logger('Router');
 $logger->pushHandler(new StreamHandler(__DIR__ . '/../logs/app.log', Logger::INFO));
 
-$pdo = Database::getInstance();
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', ''); // Update with your DB credentials
 $authMiddleware = new AuthMiddleware();
 $adminMiddleware = new AdminMiddleware();
 
@@ -54,7 +54,7 @@ $routes = [
         '/fitness/index' => fn() => $authMiddleware->handle(fn() => (new FitnessController($pdo))->index()),
     ],
     'POST' => [
-'/auth/login' => fn() => (new LoginController($pdo))->login($_POST),
+        '/auth/login' => fn() => (new LoginController($pdo))->login($_POST),
         '/auth/logout' => fn() => (new LogoutController($pdo))->logout(),
         '/auth/signup' => fn() => (new SignupController($pdo))->signup($_POST),
         '/workout/createCustomWorkout' => fn() => (new CustomController($pdo))->createCustomWorkout($_POST),

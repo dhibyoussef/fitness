@@ -22,7 +22,8 @@ $pageTitle = 'Login - Fitness Tracker';
     <style>
     body {
         font-family: 'Poppins', sans-serif;
-        background: linear-gradient(135deg, #f0f2f5, #e9ecef);
+        background: url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80') no-repeat center center fixed;
+        background-size: cover;
         min-height: 100vh;
         display: flex;
         align-items: center;
@@ -32,6 +33,11 @@ $pageTitle = 'Login - Fitness Tracker';
     .login-container {
         max-width: 400px;
         width: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        /* Added background for better readability */
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     }
     </style>
 </head>

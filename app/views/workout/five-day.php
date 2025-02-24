@@ -1,9 +1,5 @@
 <?php
-session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login');
-    exit;
-}
+
 
 // C:\xampp\htdocs\fitness-app\app\views\workout\five-day.php
 $pageTitle = '5-Day Workout Split - Fitness Tracker';

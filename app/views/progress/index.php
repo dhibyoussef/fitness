@@ -1,13 +1,24 @@
 <?php
-session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login');
-    exit;
-}
 
-require_once __DIR__ . '../../../app/models/ProgressModel.php';
+session_start();
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+]);
+$userId = 3;
+require_once __DIR__ . '/../../models/ProgressModel.php';
 $progressModel = new ProgressModel($pdo);
-$progress = $progressModel->getProgressById($_SESSION['user_id']);
+$progress = $progressModel->getProgressById($userId);
+$stats = $progressModel->getProgressStats($userId);
+$weightChange = 80;
+$bodyFatChange = 20;
+$muscleMassChange = 10;
+$totalEntries = 10;
+$progressEntries = $progressModel->getProgressEntries($userId);
+$totalPages = ceil($totalEntries / 10);
+$currentPage = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$offset = ($currentPage - 1) * 10;
+$progressEntries = array_slice($progressEntries, $offset, 10);
 
 // app/views/progress/index.php
 ?>
@@ -41,10 +52,10 @@ $progress = $progressModel->getProgressById($_SESSION['user_id']);
 
         <div class="card shadow-sm p-4 mb-4 animate__animated animate__fadeInUp">
             <h2 class="text-xl font-semibold mb-3">Progress Stats</h2>
-            <p>Weight Change: <?php echo htmlspecialchars($stats['weight_change']); ?> kg</p>
-            <p>Muscle Mass Change: <?php echo htmlspecialchars($stats['muscle_mass_change']); ?> kg</p>
-            <p>Body Fat Change: <?php echo htmlspecialchars($stats['body_fat_change']); ?>%</p>
-            <p>Total Entries: <?php echo htmlspecialchars($stats['total_entries']); ?></p>
+            <p>Weight Change: <?php echo htmlspecialchars($weightChange); ?> kg</p>
+            <p>Muscle Mass Change: <?php echo htmlspecialchars($muscleMassChange); ?> kg</p>
+            <p>Body Fat Change: <?php echo htmlspecialchars($bodyFatChange); ?>%</p>
+            <p>Total Entries: <?php echo htmlspecialchars($totalEntries); ?></p>
         </div>
 
         <table class="table table-striped">

@@ -41,25 +41,32 @@ class UserModel extends BaseModel {
         return $this->execute($query, ['id' => $id]);
     }
 
-    public function getAllUsers(int $offset, int $limit, string $search = ''): array {
+    public function getAllUsers($offset, $limit, $search = '') {
         $query = "SELECT id, username, email, role, created_at, status 
                   FROM users 
                   WHERE (username LIKE :search OR email LIKE :search) AND deleted_at IS NULL 
                   ORDER BY created_at DESC 
-                  LIMIT :offset, :limit";
+                  LIMIT :limit OFFSET :offset";
         return $this->fetchAll($query, [
             'search' => "%$search%",
-            'offset' => $offset,
-            'limit' => $limit
+            'limit' => $limit,
+            'offset' => $offset
         ]);
     }
-
+    public function getUsers() {
+        $query = "SELECT id, username, email, role, created_at, status 
+                  FROM users 
+                  WHERE deleted_at IS NULL 
+                  ORDER BY created_at DESC";
+        return $this->fetchAll($query);
+    }
+        
     public function getUserCount(string $search = ''): int {
         $query = "SELECT COUNT(*) FROM users 
                   WHERE (username LIKE :search OR email LIKE :search) AND deleted_at IS NULL";
         $stmt = $this->pdo->prepare($query);
         $stmt->execute(['search' => "%$search%"]);
-        return (int)$stmt->fetchColumn();
+        return (int)$stmt->fetchColumn() ?: 0; // Ensure it returns 0 if no count is found
     }
 
     public function activateUser(int $id): bool {
@@ -117,5 +124,10 @@ class UserModel extends BaseModel {
     }
     public function getLastInsertedId(): int {
         return $this->pdo->lastInsertId();
+    }
+    public function getRealTimeUsers(): int {
+        $query = "SELECT COUNT(DISTINCT id) FROM users WHERE last_activity > NOW() - INTERVAL 5 MINUTE AND deleted_at IS NULL";
+        $result = $this->fetchSingle($query);
+        return isset($result['count']) ? (int)$result['count'] : 0;
     }
 }

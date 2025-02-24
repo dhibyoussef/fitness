@@ -16,6 +16,15 @@ class WorkoutModel extends BaseModel {
             'is_custom' => $data['is_custom'] ?? 0
         ]);
     }
+    public function getLinkedExercises(int $workoutId): array {
+        $query = "SELECT e.id, e.name FROM exercises e JOIN workout_exercises we ON e.id = we.exercise_id WHERE we.workout_id = :workout_id";
+        return $this->fetchAll($query, ['workout_id' => $workoutId]);
+    }
+    public function getWorkouts(): array {
+        $query = "SELECT * FROM workouts WHERE deleted_at IS NULL";
+        return $this->fetchAll($query);
+    }
+
 
     public function getWorkoutById(int $id): ?array {
         $query = "SELECT w.*, c.name as category_name 
@@ -105,4 +114,17 @@ class WorkoutModel extends BaseModel {
         $query = "SELECT COUNT(*) as total_workouts, AVG(duration) as avg_duration, SUM(calories) as total_calories, COUNT(DISTINCT category_id) as categories_used FROM workouts WHERE user_id = :user_id AND deleted_at IS NULL";
         return $this->fetchSingle($query, ['user_id' => $userId]);
     }
+    public function getCategoryTrends(): array {
+        $query = "SELECT c.name, COUNT(w.id) as workouts, COUNT(m.id) as meals FROM categories c LEFT JOIN workouts w ON w.category_id = c.id AND w.deleted_at IS NULL LEFT JOIN meals m ON m.category_id = c.id AND m.deleted_at IS NULL GROUP BY c.id, c.name";
+        return $this->fetchAll($query);
+    }
+    public function getExercises() {
+        $query = "SELECT id, name FROM exercises WHERE deleted_at IS NULL ORDER BY name ASC";
+        return $this->fetchAll($query);
+    }
+    public function getCategories() {
+        $query = "SELECT id, name FROM categories WHERE deleted_at IS NULL ORDER BY name ASC";
+        return $this->fetchAll($query);
+    }
+    
 }

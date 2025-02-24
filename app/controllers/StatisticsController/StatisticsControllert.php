@@ -5,7 +5,7 @@ require_once __DIR__ . '/../../models/NutritionModel.php';
 require_once __DIR__ . '/../../models/ProgressModel.php';
 require_once __DIR__ . '/../../models/UserModel.php';
 require_once __DIR__ . '/../../controllers/BaseController.php';
-require_once __DIR__ . '/../../config/database.php'; // Adjusted path to match your structure
+require_once __DIR__ . '/../../config/database.php';
 
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
@@ -24,15 +24,15 @@ class StatisticsController extends BaseController {
         $this->progressModel = new ProgressModel($pdo);
         $this->userModel = new UserModel($pdo);
         $this->logger = new Logger('StatisticsController');
-        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../logs/app.log', Logger::INFO)); // Adjusted path
-        $this->requireAuth(); // Ensure user is logged in
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../logs/app.log', Logger::INFO));
+        $this->requireAuth();
     }
 
     public function index(): void {
         try {
             $this->checkAdminPermissions();
             $statistics = $this->getDashboardStatistics();
-            $this->render(__DIR__ . '/../../views/statistics/index.php', array_merge(
+            $this->render(__DIR__ . '/../../views/admin/dashboard.php', array_merge(
                 $statistics,
                 [
                     'csrf_token' => $this->generateCsrfToken(),
@@ -69,9 +69,13 @@ class StatisticsController extends BaseController {
             $statistics['activeUserData'] = array_values($activeUserData);
 
             $statistics['workoutStats'] = $this->workoutModel->getOverallWorkoutStatistics();
-            $statistics['nutritionStats'] = $this->nutritionModel->getOverallNutritionStatistics();
+            $statistics['nutritionData'] = $this->nutritionModel->getOverallNutritionStatistics();
             $statistics['progressStats'] = $this->progressModel->getOverallProgressStatistics();
             $statistics['categoryTrends'] = $this->getCategoryTrends();
+
+            $statistics['userCount'] = $this->userModel->getUserCount(); // Added for total users
+            $statistics['activeUsers'] = count($activeUserData); // Total active users
+            $statistics['realTimeUsers'] = $this->userModel->getRealTimeUsers(); // Total real-time users
 
             $this->storeInCache($cacheKey, $statistics, 300);
             $this->logger->info("Cached stats", ['key' => $cacheKey]);
@@ -82,7 +86,21 @@ class StatisticsController extends BaseController {
         return $statistics;
     }
 
+    protected function fetchFromCache(string $key): mixed {
+        $cacheFile = __DIR__ . '/../../cache/' . md5($key) . '.cache';
+        if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 300) {
+            return unserialize(file_get_contents($cacheFile));
+        }
+        return false;
+    }
 
+    protected function storeInCache(string $key, mixed $value, int $ttl): void {
+        $cacheDir = __DIR__ . '/../../cache/';
+        if (!is_dir($cacheDir)) {
+            mkdir($cacheDir, 0777, true);
+        }
+        file_put_contents($cacheDir . md5($key) . '.cache', serialize($value));
+    }
 
     private function getCategoryTrends(): array {
         $query = "SELECT c.name, COUNT(w.id) as workouts, COUNT(m.id) as meals 
@@ -102,5 +120,10 @@ class StatisticsController extends BaseController {
             $this->setFlashMessage('error', 'Admin access required.');
             $this->redirect('/auth/login');
         }
+    }
+
+    private function getRealTimeUsers(): int {
+        $query = "SELECT COUNT(DISTINCT id) FROM users WHERE last_activity > NOW() - INTERVAL 5 MINUTE AND deleted_at IS NULL";
+        return (int)$this->db->query($query)->fetchColumn();
     }
 }

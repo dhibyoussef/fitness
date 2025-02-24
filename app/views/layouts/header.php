@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../../vendor/autoload.php'; // Add this line
 require_once __DIR__ . '/../../../config/database.php';
 require_once __DIR__ . '/../../../app/controllers/BaseController.php';
 
-$pdo = Database::getInstance();
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', ''); // Update with your DB credentials
 $baseController = new BaseController($pdo);
 ?>
 <!DOCTYPE html>

@@ -1,15 +1,16 @@
 <?php
 // app/views/admin/user_details.php
 session_start();
-require_once __DIR__ . '/../../app/models/UserModel.php';
+require_once __DIR__ . '/../../models/UserModel.php';
 
-if (!isset($_SESSION['admin'])) {
-    header('Location: /admin/login');
-    exit;
-}
-
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [  
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+]);
+$userId = 3;
+require_once __DIR__ . '/../../models/UserModel.php';
 $userModel = new UserModel($pdo);
-$user = $userModel->getUserById($_GET['id']);
+$user = $userModel->getUserById($userId);
 
 ?>
 <!DOCTYPE html>

@@ -76,4 +76,20 @@ class ProgressModel extends BaseModel {
             'avg_muscle_mass' => 0
         ];
     }
+    public function getAverageProgress(string $column): float {
+        $query = "SELECT AVG($column) as avg_value FROM progress WHERE deleted_at IS NULL";
+        return $this->fetchSingle($query)['avg_value'] ?? 0;
+    }
+    public function getProgressStats(int $userId): array {
+        $query = "SELECT AVG(weight) as avg_weight, AVG(body_fat) as avg_body_fat, AVG(muscle_mass) as avg_muscle_mass FROM progress WHERE user_id = :user_id AND deleted_at IS NULL";
+        return $this->fetchSingle($query, ['user_id' => $userId]) ?? [];
+    }
+    public function getTotalProgressEntries(int $userId): int {
+        $query = "SELECT COUNT(*) FROM progress WHERE user_id = :user_id AND deleted_at IS NULL";
+        return (int)$this->fetchSingle($query, ['user_id' => $userId])['count'];
+    }
+    public function getProgressEntries(int $userId): array {
+        $query = "SELECT * FROM progress WHERE user_id = :user_id AND deleted_at IS NULL";
+        return $this->fetchAll($query, ['user_id' => $userId]);
+    }
 }

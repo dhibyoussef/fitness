@@ -1,14 +1,31 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login');
-    exit;
-}
-require_once __DIR__ . '../../../app/models/NutritionModel.php';
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+]);
+$userId = 3;
+require_once __DIR__ . '/../../models/NutritionModel.php';
 $nutritionModel = new NutritionModel($pdo);
-$nutrition = $nutritionModel->getNutritionById($_SESSION['user_id']);
+$nutrition = $nutritionModel->getNutritionById($userId);
 $currentPage = isset($_GET['page']) ? intval($_GET['page']) : 1;
 $filter = isset($_GET['filter']) ? $_GET['filter'] : '';
+$allStats = $nutritionModel->getAllStats($userId);
+$totalProtein = $nutritionModel->getTotalProtein($userId);
+$totalCarbs = $nutritionModel->getTotalCarbs($userId);
+$totalFat = $nutritionModel->getTotalFat($userId);
+$currentPage = isset($_GET['page']) ? intval($_GET['page']) : 1;
+$filter = isset($_GET['filter']) ? $_GET['filter'] : '';
+$sortBy = isset($_GET['sortBy']) ? $_GET['sortBy'] : 'created_at';
+$sortOrder = isset($_GET['sortOrder']) ? $_GET['sortOrder'] : 'DESC';
+$limit = 10;
+$offset = ($currentPage - 1) * $limit;
+$meals = $nutritionModel->getAllMeals($userId);
+$totalPages = ceil(count($meals) / $limit);
+
+
+
+
 
 // app/controllers/NutritionController.php
 // app/views/nutrition/index.php
@@ -43,11 +60,11 @@ $filter = isset($_GET['filter']) ? $_GET['filter'] : '';
 
         <div class="card shadow-sm p-4 mb-4 animate__animated animate__fadeInUp">
             <h2 class="text-xl font-semibold mb-3">Nutrition Stats</h2>
-            <p>Total Calories: <?php echo number_format($stats['total_calories']); ?> kcal</p>
-            <p>Average Calories: <?php echo number_format($stats['avg_calories'], 1); ?> kcal</p>
-            <p>Total Protein: <?php echo number_format($stats['total_protein'], 1); ?> g</p>
-            <p>Total Carbs: <?php echo number_format($stats['total_carbs'], 1); ?> g</p>
-            <p>Total Fat: <?php echo number_format($stats['total_fat'], 1); ?> g</p>
+            <p>Total Calories: <?php echo number_format($allStats['total_calories']); ?> kcal</p>
+            <p>Average Calories: <?php echo number_format($allStats['avg_calories'], 1); ?> kcal</p>
+            <p>Total Protein: <?php echo number_format($totalProtein['total_protein'], 1); ?> g</p>
+            <p>Total Carbs: <?php echo number_format($totalCarbs['total_carbs'], 1); ?> g</p>
+            <p>Total Fat: <?php echo number_format($totalFat['total_fat'], 1); ?> g</p>
         </div>
 
         <table class="table table-striped">

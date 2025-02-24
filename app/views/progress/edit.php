@@ -1,13 +1,14 @@
 <?php
-session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login');
-    exit;
-}   
 
-require_once __DIR__ . '../../../app/models/ProgressModel.php';
+session_start();
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+]);
+$userId = 3;
+require_once __DIR__ . '/../../models/ProgressModel.php';
 $progressModel = new ProgressModel($pdo);
-$progress = $progressModel->getProgressById($_SESSION['user_id']);
+$progress = $progressModel->getProgressById($userId);
 
 // app/views/progress/edit.php
 ?>

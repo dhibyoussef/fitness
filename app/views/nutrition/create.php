@@ -1,10 +1,12 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login');
-    exit;
-}
-require_once __DIR__ . '../../../app/models/NutritionModel.php';
+require_once __DIR__ . '/../../models/NutritionModel.php';
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+]);
+$userId = 3;
+    
 
 $nutritionModel = new NutritionModel($pdo);
 $categories = $nutritionModel->getAllCategories();

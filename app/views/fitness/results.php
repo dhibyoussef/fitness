@@ -1,13 +1,32 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login');
-    exit;
-}
-require_once __DIR__ . '../../../app/models/ExerciseModel.php';
+
+require_once __DIR__ . '/../../models/ExerciseModel.php';
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+]);
+$userId = 3;
+$exerciseId = 4;
+
+// Calculate one-rep max (1RM)
+$one_rm = 100;
+$load = [
+    ['percent' => 80, 'weight' => 100],
+    ['percent' => 90, 'weight' => 110],
+    ['percent' => 100, 'weight' => 120]
+];
+$warmup = [
+    ['set' => 1, 'weight' => 50, 'reps' => 10, 'rest' => 60],
+    ['set' => 2, 'weight' => 60, 'reps' => 8, 'rest' => 60]
+];
+$tdee = 2000;
+
 
 $exerciseModel = new ExerciseModel($pdo);
-$exercise = $exerciseModel->getExerciseById($_POST['exercise_id'], $_SESSION['user_id'] );
+$exercise = $exerciseModel->getExerciseById(4, $userId);
+$macros = ['protein' => 100, 'carbs' => 100, 'fat' => 100];
+
 
 // app/views/fitness/results.php
 ?>
@@ -26,7 +45,7 @@ $exercise = $exerciseModel->getExerciseById($_POST['exercise_id'], $_SESSION['us
 <body class="bg-gray-100">
     <div class="container mx-auto py-8">
         <h1 class="text-3xl font-bold mb-6 animate__animated animate__fadeIn">Fitness Results for
-            <?php echo htmlspecialchars($exercise['name']); ?></h1>
+        </h1>
 
         <div class="card shadow-sm p-4 animate__animated animate__fadeInUp">
             <h2 class="text-2xl font-semibold mb-3">1RM Estimate</h2>
@@ -48,12 +67,12 @@ $exercise = $exerciseModel->getExerciseById($_POST['exercise_id'], $_SESSION['us
             </ul>
 
             <h2 class="text-2xl font-semibold mb-3 mt-4">TDEE & Macros</h2>
-            <p>BMR: <?php echo $tdee['bmr']; ?> kcal</p>
-            <p>TDEE: <?php echo $tdee['tdee']; ?> kcal</p>
-            <p>BMI: <?php echo $tdee['bmi']; ?></p>
-            <p>Cut: <?php echo $tdee['cut']; ?> kcal</p>
-            <p>Maintain: <?php echo $tdee['maintain']; ?> kcal</p>
-            <p>Bulk: <?php echo $tdee['bulk']; ?> kcal</p>
+            <p>BMR: <?php echo $tdee; ?> kcal</p>
+            <p>TDEE: <?php echo $tdee; ?> kcal</p>
+            <p>BMI: <?php echo $tdee; ?></p>
+            <p>Cut: <?php echo $tdee; ?> kcal</p>
+            <p>Maintain: <?php echo $tdee; ?> kcal</p>
+            <p>Bulk: <?php echo $tdee; ?> kcal</p>
             <p>Protein: <?php echo $macros['protein']; ?> g</p>
             <p>Carbs: <?php echo $macros['carbs']; ?> g</p>
             <p>Fat: <?php echo $macros['fat']; ?> g</p>

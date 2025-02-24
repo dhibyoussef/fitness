@@ -1,14 +1,14 @@
 <?php
 // app/views/nutrition/edit.php
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login');
-    exit;
-}
-require_once __DIR__ . '../../../app/models/NutritionModel.php';
-
+require_once __DIR__ . '/../../models/NutritionModel.php';
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+]);
+$nutritionId = 1;
 $nutritionModel = new NutritionModel($pdo);
-$nutrition = $nutritionModel->getNutritionById($_SESSION['user_id']);
+$nutrition = $nutritionModel->getNutritionById($nutritionId);
 ?>
 <!DOCTYPE html>
 <html lang="en">

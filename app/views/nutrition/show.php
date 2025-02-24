@@ -1,12 +1,16 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login');
-    exit;
-}
-require_once __DIR__ . '../../../app/models/NutritionModel.php';
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+]); 
+$userId = 3;
+require_once __DIR__ . '/../../models/NutritionModel.php';
 $nutritionModel = new NutritionModel($pdo);
-$nutrition = $nutritionModel->getNutritionById($_SESSION['user_id']);
+$nutrition = $nutritionModel->getNutritionById($userId);
+$mealId = 1;
+$meal = $nutritionModel->getMealById($mealId);
+
 
 // app/views/nutrition/show.php
 ?>
@@ -38,7 +42,7 @@ $nutrition = $nutritionModel->getNutritionById($_SESSION['user_id']);
             <h2 class="text-xl font-semibold mt-4 mb-2">Suggestions</h2>
             <ul>
                 <?php foreach ($meal['suggestions'] as $suggestion): ?>
-                <li><?php echo htmlspecialchars($suggestion); ?></li>
+                <li><?php echo htmlspecialchars($suggestion['suggestion']); ?></li>
                 <?php endforeach; ?>
             </ul>
         </div>

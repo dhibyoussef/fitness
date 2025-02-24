@@ -1,21 +1,24 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login');
-    exit;
-}
 
-require_once __DIR__ . '../../../app/models/ProgressModel.php';
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+]);
+$userId = 3;
+require_once __DIR__ . '/../../models/ProgressModel.php';
 $progressModel = new ProgressModel($pdo);
-$progress = $progressModel->getProgressById($_SESSION['user_id']);
+$progress = $progressModel->getProgressById($userId);
 
-require_once __DIR__ . '../../../app/models/WorkoutModel.php';
+require_once __DIR__ . '/../../models/WorkoutModel.php';
 $workoutModel = new WorkoutModel($pdo);
-$workoutStats = $workoutModel->getoWorkoutStats($_SESSION['user_id']);
+$workoutStats = $workoutModel->getoWorkoutStats($userId);
 
-require_once __DIR__ . '../../../app/models/NutritionModel.php';
+require_once __DIR__ . '/../../models/NutritionModel.php';
 $nutritionModel = new NutritionModel($pdo);
-$nutritionStats = $nutritionModel->getNutritionStats($_SESSION['user_id']);
+$nutritionStats = $nutritionModel->getNutritionStats($userId);
+$averageCaloriesPerMeal = 40;
+$totalMeals = 3;
 
 ?>
 <!DOCTYPE html>
@@ -52,9 +55,9 @@ $nutritionStats = $nutritionModel->getNutritionStats($_SESSION['user_id']);
             <div class="col-md-6">
                 <div class="card shadow-sm p-4 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
                     <h2 class="text-xl font-semibold mb-3">Nutrition Stats</h2>
-                    <p>Average Calories: <?php echo number_format($nutritionStats['avg_calories_per_meal'], 1); ?> kcal
+                    <p>Average Calories: <?php echo number_format($averageCaloriesPerMeal, 1); ?> kcal
                     </p>
-                    <p>Total Meals: <?php echo htmlspecialchars($nutritionStats['total_meals']); ?></p>
+                    <p>Total Meals: <?php echo htmlspecialchars($totalMeals); ?></p>
                 </div>
             </div>
         </div>
@@ -66,9 +69,7 @@ $nutritionStats = $nutritionModel->getNutritionStats($_SESSION['user_id']);
             </div>
         </div>
 
-        <div class="mt-8">
-            <a href="/dashboard" class="btn btn-primary animate__animated animate__fadeInUp">Back to Dashboard</a>
-        </div>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

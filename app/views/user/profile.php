@@ -1,13 +1,22 @@
 <?php
+require_once __DIR__ . '/../../models/UserModel.php';
+require_once __DIR__ . '/../../models/WorkoutModel.php';
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login');
-    exit;
-}
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+]);
+$displayname = 'John Doe';
+$userId = 3;
+$workoutModel = new WorkoutModel($pdo);
+$progress = $workoutModel->getOverallWorkoutStatistics();
+$avg_weight = 70;
+$avg_body_fat = 10;
+$avg_muscle_mass = 10;
 
-require_once __DIR__ . '../../../app/models/UserModel.php';
 $userModel = new UserModel($pdo);
-$user = $userModel->getUserById($_SESSION['user_id']);
+$user = $userModel->getUserById($userId);
+$joined = date('F j, Y H:i');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -24,20 +33,20 @@ $user = $userModel->getUserById($_SESSION['user_id']);
 <body class="bg-gray-100">
     <div class="container mx-auto py-8">
         <h1 class="text-3xl font-bold mb-6 animate__animated animate__fadeIn">Profile:
-            <?php echo htmlspecialchars($user['display_name']); ?></h1>
+            <?php echo htmlspecialchars($displayname); ?></h1>
 
         <div class="card shadow-sm p-4 animate__animated animate__fadeInUp">
             <p><strong>Email:</strong> <?php echo htmlspecialchars($user['email']); ?></p>
             <p><strong>Role:</strong> <?php echo htmlspecialchars($user['role']); ?></p>
-            <p><strong>Joined:</strong> <?php echo htmlspecialchars($user['joined']); ?></p>
+            <p><strong>Joined:</strong> <?php echo htmlspecialchars($joined); ?></p>
             <p><strong>Last Activity:</strong>
                 <?php echo $user['last_activity'] ? date('F j, Y H:i', strtotime($user['last_activity'])) : 'N/A'; ?>
             </p>
 
             <h2 class="text-xl font-semibold mt-4 mb-2">Progress Stats</h2>
-            <p>Average Weight: <?php echo number_format($progress['avg_weight'], 1); ?> kg</p>
-            <p>Average Body Fat: <?php echo number_format($progress['avg_body_fat'], 1); ?>%</p>
-            <p>Average Muscle Mass: <?php echo number_format($progress['avg_muscle_mass'], 1); ?> kg</p>
+            <p>Average Weight: <?php echo number_format($avg_weight, 1); ?> kg</p>
+            <p>Average Body Fat: <?php echo number_format($avg_body_fat, 1); ?>%</p>
+            <p>Average Muscle Mass: <?php echo number_format($avg_muscle_mass, 1); ?> kg</p>
         </div>
 
         <div class="mt-6">

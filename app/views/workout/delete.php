@@ -1,13 +1,21 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login');
-    exit;
-}
 
-require_once __DIR__ . '../../../app/models/WorkoutModel.php';
+require_once __DIR__ . '/../../models/WorkoutModel.php';
+require_once __DIR__ . '/../../controllers/BaseController.php';
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+]);
 $workoutModel = new WorkoutModel($pdo);
-$workout = $workoutModel->getWorkoutById($_SESSION['user_id']);
+$baseController = new BaseController($pdo);
+$name = 'workout';
+
+$id = 3;
+
+$workout = $workoutModel->getWorkoutById($id);
+$csrf_token = $baseController->generateCsrfToken();
+
 ?>
 <!DOCTYPE html>
 <html lang="en">

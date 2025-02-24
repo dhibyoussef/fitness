@@ -1,13 +1,15 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    header('Location: /login');
-    exit;
-}
+$id = 3;
 
-require_once __DIR__ . '../../../app/models/WorkoutModel.php';
+require_once __DIR__ . '/../../models/WorkoutModel.php';
+require_once __DIR__ . '/../../controllers/BaseController.php'; 
+$pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', ''); // Replace with your actual credentials   
 $workoutModel = new WorkoutModel($pdo);
-$workout = $workoutModel->getWorkoutById($_SESSION['user_id']);
+$baseController = new BaseController($pdo);
+$workout = $workoutModel->getWorkoutById($id);
+$csrf_token = $baseController->generateCsrfToken();
+$linkedExercises = $workoutModel->getLinkedExercises($id);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -83,12 +85,10 @@ $workout = $workoutModel->getWorkoutById($_SESSION['user_id']);
                         </option>
                         <?php endforeach; ?>
                     </select>
-                    <input type="number" name="exercises[<?php echo $index; ?>][sets]"
-                        value="<?php echo htmlspecialchars($exercise['sets']); ?>" placeholder="Sets"
+                    <input type="number" name="exercises[<?php echo $index; ?>][sets]" value="" placeholder="Sets"
                         class="form-control mb-1" min="1">
-                    <input type="text" name="exercises[<?php echo $index; ?>][reps]"
-                        value="<?php echo htmlspecialchars($exercise['reps']); ?>" placeholder="Reps (e.g., 10 or 8-12)"
-                        class="form-control">
+                    <input type="text" name="exercises[<?php echo $index; ?>][reps]" value=""
+                        placeholder="Reps (e.g., 10 or 8-12)" class="form-control">
                     <button type="button" class="btn btn-outline-danger btn-sm mt-1 remove-exercise">Remove</button>
                 </div>
                 <?php endforeach; ?>
