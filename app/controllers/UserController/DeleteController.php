@@ -1,15 +1,20 @@
 <?php
-// app/controllers/UserController/DeleteController.php
+namespace App\Controllers\UserController;
+
 require_once __DIR__ . '/../../models/UserModel.php';
 require_once __DIR__ . '/../../controllers/BaseController.php';
 require_once __DIR__ . '/../../../config/database.php';
 
+use App\Controllers\BaseController;
+use Exception;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use PDO;
+use App\Models\UserModel;
 
-class DeleteController extends BaseController {
+class DeleteControllerU extends BaseController {
     private UserModel $userModel;
-    private Logger $logger;
+    protected Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
@@ -30,8 +35,14 @@ class DeleteController extends BaseController {
             }
 
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                $this->render(__DIR__ . '/../../views/user/delete.php', [
+                $user = $this->userModel->getUserById($id);
+                if (!$user) {
+                    throw new Exception('User not found.');
+                }
+                $this->render('user/delete', [ // Use relative path
+                    'pageTitle' => 'Delete Account',
                     'id' => $id,
+                    'username' => $user['username'],
                     'csrf_token' => $this->generateCsrfToken()
                 ]);
                 return;

@@ -1,17 +1,23 @@
 <?php
-// app/controllers/WorkoutController/EditController.php
+namespace App\Controllers\WorkoutController;
+
 require_once __DIR__ . '/../../models/WorkoutModel.php';
 require_once __DIR__ . '/../../models/ExerciseModel.php';
 require_once __DIR__ . '/../../controllers/BaseController.php';
 require_once __DIR__ . '/../../../config/database.php';
 
+use App\Controllers\BaseController;
+use Exception;
+use App\Models\ExerciseModel;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use PDO;
+use App\Models\WorkoutModel;
 
-class EditController extends BaseController {
+class EditControllerW extends BaseController {
     private WorkoutModel $workoutModel;
     private ExerciseModel $exerciseModel;
-    private Logger $logger;
+    protected Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
@@ -35,7 +41,8 @@ class EditController extends BaseController {
 
             $exercises = $this->exerciseModel->getUserExercises((int)$_SESSION['user_id']);
             $linkedExercises = $this->getLinkedExercises($id);
-            $this->render(__DIR__ . '/../../views/workout/edit.php', [
+            $this->render('workout/edit', [ // Fixed: Use relative path
+                'pageTitle' => 'Edit Workout - ' . htmlspecialchars($workout['name']),
                 'workout' => $workout,
                 'exercises' => $exercises,
                 'linkedExercises' => $linkedExercises,
@@ -51,7 +58,7 @@ class EditController extends BaseController {
                 'trace' => $e->getTraceAsString()
             ]);
             $this->setFlashMessage('error', $e->getMessage());
-            $this->redirect('/workout/index');
+            $this->redirect('/workouts/index'); // Fixed: Redirect to plural "workouts"
         }
     }
 
@@ -75,16 +82,16 @@ class EditController extends BaseController {
                 'name' => $this->sanitizeText($data['name']),
                 'description' => $this->sanitizeText($data['description'] ?? $workout['description']),
                 'duration' => (int)$data['duration'],
-                'calories' => isset($data['calories']) ? (int)$data['calories'] : $workout['calories'],
-                'category_id' => isset($data['category_id']) ? (int)$data['category_id'] : $workout['category_id']
+                'calories' => isset($data['calories']) && $data['calories'] !== '' ? (int)$data['calories'] : null,
+                'category_id' => isset($data['category_id']) && $data['category_id'] !== '' ? (int)$data['category_id'] : null
             ];
 
-            $this->db->beginTransaction();
+            $this->pdo->beginTransaction(); // Fixed: Use $this->pdo
             if ($this->workoutModel->updateWorkout($id, $sanitizedData)) {
                 if (!empty($data['exercises'])) {
                     $this->updateLinkedExercises($id, $data['exercises']);
                 }
-                $this->db->commit();
+                $this->pdo->commit();
                 $this->logger->info("Workout updated", [
                     'id' => $id,
                     'user_id' => $_SESSION['user_id'],
@@ -92,11 +99,11 @@ class EditController extends BaseController {
                 ]);
                 $this->setFlashMessage('success', 'Workout updated successfully!');
             } else {
-                $this->db->rollBack();
+                $this->pdo->rollBack();
                 throw new Exception('No changes detected or update failed.');
             }
         } catch (Exception $e) {
-            $this->db->rollBack();
+            $this->pdo->rollBack();
             $this->logger->error("Update error", [
                 'message' => $e->getMessage(),
                 'id' => $id,
@@ -105,7 +112,7 @@ class EditController extends BaseController {
             ]);
             $this->setFlashMessage('error', $e->getMessage());
         }
-        $this->redirect('/workout/index');
+        $this->redirect('/workouts/index'); // Fixed: Redirect to plural "workouts"
     }
 
     private function validateWorkoutData(array $data): void {
@@ -115,10 +122,10 @@ class EditController extends BaseController {
         if (empty($data['duration']) || !is_numeric($data['duration']) || $data['duration'] <= 0 || $data['duration'] > 1440) {
             throw new Exception('Duration must be 1-1440 minutes.');
         }
-        if (isset($data['calories']) && (!is_numeric($data['calories']) || $data['calories'] < 0 || $data['calories'] > 10000)) {
+        if (isset($data['calories']) && $data['calories'] !== '' && (!is_numeric($data['calories']) || $data['calories'] < 0 || $data['calories'] > 10000)) {
             throw new Exception('Calories must be 0-10000 if provided.');
         }
-        if (isset($data['category_id']) && !$this->isValidCategory($data['category_id'])) {
+        if (isset($data['category_id']) && $data['category_id'] !== '' && !$this->isValidCategory($data['category_id'])) {
             throw new Exception('Invalid category.');
         }
     }
@@ -127,33 +134,33 @@ class EditController extends BaseController {
         $query = "SELECT we.*, e.name FROM workout_exercises we 
                   JOIN exercises e ON we.exercise_id = e.id 
                   WHERE we.workout_id = :workout_id AND we.deleted_at IS NULL";
-        $stmt = $this->db->prepare($query);
+        $stmt = $this->pdo->prepare($query); // Fixed: Use $this->pdo
         $stmt->execute(['workout_id' => $workoutId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
     private function updateLinkedExercises(int $workoutId, array $exercises): void {
-        $this->db->exec("UPDATE workout_exercises SET deleted_at = NOW() WHERE workout_id = $workoutId");
+        $this->pdo->exec("UPDATE workout_exercises SET deleted_at = NOW() WHERE workout_id = $workoutId"); // Fixed: Use $this->pdo
         foreach ($exercises as $exercise) {
-            if (!isset($exercise['id'], $exercise['sets'], $exercise['reps'])) {
+            if (!isset($exercise['id'], $exercise['sets'], $exercise['reps']) || empty($exercise['id'])) {
                 continue;
             }
             $query = "INSERT INTO workout_exercises (workout_id, exercise_id, sets, reps, rest_time) 
                       VALUES (:workout_id, :exercise_id, :sets, :reps, '60s')
                       ON DUPLICATE KEY UPDATE sets = :sets, reps = :reps, deleted_at = NULL";
-            $stmt = $this->db->prepare($query);
+            $stmt = $this->pdo->prepare($query); // Fixed: Use $this->pdo
             $stmt->execute([
                 'workout_id' => $workoutId,
                 'exercise_id' => (int)$exercise['id'],
                 'sets' => (int)$exercise['sets'],
-                'reps' => $exercise['reps']
+                'reps' => $this->sanitizeText($exercise['reps'])
             ]);
         }
     }
 
     private function isValidCategory($categoryId): bool {
         $query = "SELECT COUNT(*) FROM categories WHERE id = :id AND deleted_at IS NULL";
-        $stmt = $this->db->prepare($query);
+        $stmt = $this->pdo->prepare($query); // Fixed: Use $this->pdo
         $stmt->execute(['id' => (int)$categoryId]);
         return $stmt->fetchColumn() > 0;
     }

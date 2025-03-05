@@ -1,6 +1,14 @@
 <?php
 // C:\xampp\htdocs\fitness-app\app\views\admin\dashboard.php
-session_start();
+
+use App\Controllers\BaseController;
+use App\Models\AdminModel;
+use App\Models\NutritionModel;
+use App\Models\ProgressModel;
+use App\Models\UserModel;
+use App\Models\WorkoutModel;
+
+
 require_once __DIR__ . '/../../../vendor/autoload.php';
 require_once __DIR__ . '/../../../app/models/AdminModel.php';
 require_once __DIR__ . '/../../../app/models/UserModel.php';
@@ -27,7 +35,7 @@ try {
 
     // Ensure progress data is structured correctly
     $averageProgress = $progressModel->getOverallProgressStatistics();
-    if (!is_array($averageProgress) || !isset($averageProgress['avg_weight'], $averageProgress['avg_body_fat'], $averageProgress['avg_muscle_mass'])) {
+    if (!isset($averageProgress['avg_weight'], $averageProgress['avg_body_fat'], $averageProgress['avg_muscle_mass'])) {
         $averageProgress = [
             'avg_weight' => $progressModel->getAverageProgress('weight'),
             'avg_body_fat' => $progressModel->getAverageProgress('body_fat'),
@@ -46,6 +54,7 @@ try {
 } catch (PDOException $e) {
     echo "Database connection failed: " . htmlspecialchars($e->getMessage());
     exit;
+} catch (Exception $e) {
 }
 ?>
 
@@ -406,23 +415,7 @@ try {
             <div class="flex justify-between items-center">
                 <a href="/" class="text-2xl font-bold text-gray-800 dark-mode:text-white">Fitness Tracker</a>
                 <div class="flex items-center space-x-4">
-                    <?php if (isset($_SESSION['user_id'])): ?>
-                    <a href="/user/profile"
-                        class="text-gray-600 hover:text-blue-500 dark-mode:text-gray-300 dark-mode:hover:text-blue-400 flex items-center">
-                        <i class="fas fa-user mr-2"></i>
-                        <?php echo htmlspecialchars($_SESSION['username'] ?? 'Profile'); ?>
-                    </a>
-                    <form method="POST" action="/auth/logout" class="inline">
-                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                        <button type="submit" class="logout-btn" title="Logout">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </button>
-                    </form>
-                    <a href="/auth/logout"
-                        class="text-gray-600 hover:text-blue-500 dark-mode:text-gray-300 dark-mode:hover:text-blue-400 flex items-center">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </a>
-                    <?php endif; ?>
+
                     <form method="POST" action="<?php echo $_SERVER['REQUEST_URI']; ?>" class="inline">
                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                         <input type="hidden" name="toggle_theme" value="1">
@@ -451,31 +444,20 @@ try {
                 </a>
             </li>
             <li class="nav-item">
-                <a href="/admin/users"
+                <a href="/admin/user_management"
                     class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/admin/users') !== false ? 'active' : ''; ?>">
                     <i class="fas fa-users mr-2"></i> User Management
                 </a>
             </li>
             <li class="nav-item">
-                <a href="/statistics"
+                <a href="/admin/statistics"
                     class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/statistics') !== false ? 'active' : ''; ?>">
                     <i class="fas fa-chart-line mr-2"></i> Statistics
                 </a>
             </li>
+
             <li class="nav-item">
-                <a href="/admin/settings"
-                    class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/admin/settings') !== false ? 'active' : ''; ?>">
-                    <i class="fas fa-cog mr-2"></i> Settings
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="/admin/notifications"
-                    class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/admin/notifications') !== false ? 'active' : ''; ?>">
-                    <i class="fas fa-bell mr-2"></i> Notifications
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="/admin/logout" class="nav-link">
+                <a href="/auth/logout" class="nav-link">
                     <i class="fas fa-sign-out-alt mr-2"></i> Logout
                 </a>
             </li>
@@ -667,7 +649,6 @@ try {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ScrollTrigger/1.0.8/ScrollTrigger.min.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         // Registration Trends Chart

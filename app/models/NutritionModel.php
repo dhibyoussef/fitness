@@ -1,8 +1,15 @@
 <?php
 // app/models/NutritionModel.php
+namespace App\Models;
+use Exception;
+use PDO;
+
 require_once __DIR__ . '/BaseModel.php';
 
 class NutritionModel extends BaseModel {
+    /**
+     * @throws Exception
+     */
     public function createMeal(array $data): bool {
         $query = "INSERT INTO meals (user_id, name, calories, protein, carbs, fat, category_id, created_at, updated_at) 
                   VALUES (:user_id, :name, :calories, :protein, :carbs, :fat, :category_id, :created_at, NOW())";
@@ -18,6 +25,9 @@ class NutritionModel extends BaseModel {
         ]);
     }
 
+    /**
+     * @throws Exception
+     */
     public function getNutritionById(int $id): ?array {
         $query = "SELECT m.*, c.name as category_name 
                   FROM meals m 
@@ -26,6 +36,9 @@ class NutritionModel extends BaseModel {
         return $this->fetchSingle($query, ['id' => $id]);
     }
 
+    /**
+     * @throws Exception
+     */
     public function updateMeal(int $id, array $data): bool {
         $query = "UPDATE meals 
                   SET name = :name, calories = :calories, protein = :protein, carbs = :carbs, fat = :fat, 
@@ -42,11 +55,17 @@ class NutritionModel extends BaseModel {
         ]);
     }
 
+    /**
+     * @throws Exception
+     */
     public function deleteMeal(int $id): bool {
         $query = "UPDATE meals SET deleted_at = NOW() WHERE id = :id AND deleted_at IS NULL";
         return $this->execute($query, ['id' => $id]);
     }
 
+    /**
+     * @throws Exception
+     */
     public function fetchMeals(int $offset, int $limit, string $filter = '', string $sortBy = 'created_at', string $sortOrder = 'DESC', int $userId): array {
         $query = "SELECT m.*, c.name as category_name 
                   FROM meals m 
@@ -91,21 +110,35 @@ class NutritionModel extends BaseModel {
         ];
     }
 
+    /**
+     * @throws Exception
+     */
     public function getAllCategories(): array {
         $query = "SELECT id, name FROM categories WHERE deleted_at IS NULL ORDER BY name ASC";
         return $this->fetchAll($query);
     }
 
+    /**
+     * @throws Exception
+     */
     public function getCategoryById(?int $categoryId): ?string {
         if (!$categoryId) return null;
         $query = "SELECT name FROM categories WHERE id = :id AND deleted_at IS NULL";
         $result = $this->fetchSingle($query, ['id' => $categoryId]);
         return $result['name'] ?? null;
     }
+
+    /**
+     * @throws Exception
+     */
     public function getNutritionStats(int $userId): array {
         $query = "SELECT COUNT(*) as total_meals, AVG(calories) as avg_calories, SUM(calories) as total_calories FROM meals WHERE user_id = :user_id AND deleted_at IS NULL";
         return $this->fetchSingle($query, ['user_id' => $userId]);
     }
+
+    /**
+     * @throws Exception
+     */
     public function getNutrition(int $userId, int $currentPage, string $filter): array {
         $offset = ($currentPage - 1) * 10;
         $query = "SELECT * FROM meals WHERE user_id = :user_id AND name LIKE :filter AND deleted_at IS NULL ORDER BY created_at DESC LIMIT :offset, 10";
@@ -117,26 +150,50 @@ class NutritionModel extends BaseModel {
         $stmt->execute(['user_id' => $userId, 'filter' => "%$filter%"]);
         return ceil($stmt->fetchColumn() / 10);
     }
+
+    /**
+     * @throws Exception
+     */
     public function getAllStats(int $userId): array {
         $query = "SELECT AVG(calories) as avg_calories, SUM(calories) as total_calories FROM meals WHERE user_id = :user_id AND deleted_at IS NULL";
         return $this->fetchSingle($query, ['user_id' => $userId]);
     }
+
+    /**
+     * @throws Exception
+     */
     public function getTotalProtein(int $userId): array {
         $query = "SELECT SUM(protein) as total_protein FROM meals WHERE user_id = :user_id AND deleted_at IS NULL";
         return $this->fetchSingle($query, ['user_id' => $userId]);
     }
+
+    /**
+     * @throws Exception
+     */
     public function getTotalCarbs(int $userId): array {
         $query = "SELECT SUM(carbs) as total_carbs FROM meals WHERE user_id = :user_id AND deleted_at IS NULL";
         return $this->fetchSingle($query, ['user_id' => $userId]);
     }
+
+    /**
+     * @throws Exception
+     */
     public function getTotalFat(int $userId): array {
         $query = "SELECT SUM(fat) as total_fat FROM meals WHERE user_id = :user_id AND deleted_at IS NULL";
         return $this->fetchSingle($query, ['user_id' => $userId]);
     }
+
+    /**
+     * @throws Exception
+     */
     public function getAllMeals(int $userId): array {
         $query = "SELECT * FROM meals WHERE user_id = :user_id AND deleted_at IS NULL ORDER BY created_at DESC";
         return $this->fetchAll($query, ['user_id' => $userId]);
     }
+
+    /**
+     * @throws Exception
+     */
     public function getMealById(int $mealId): array {
         $query = "SELECT * FROM meals WHERE id = :id AND deleted_at IS NULL";
         return $this->fetchSingle($query, ['id' => $mealId]);

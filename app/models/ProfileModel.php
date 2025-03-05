@@ -1,6 +1,9 @@
 <?php
-require_once 'BaseModel.php';
+namespace App\Models;
+use Exception;
+use PDO;
 
+require_once 'BaseModel.php';
 class ProfileModel extends BaseModel {
     /**
      * Retrieves a user profile by user ID.

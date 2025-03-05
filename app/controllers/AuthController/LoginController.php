@@ -1,30 +1,35 @@
 <?php
-// app/controllers/AuthController/LoginController.php
+namespace App\Controllers\AuthController;
+use App\Controllers\BaseController;
+use PDO;
+use Exception;
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
+use App\Models\UserModel;
+use Random\RandomException;
+
 require_once __DIR__ . '/../../models/UserModel.php';
 require_once __DIR__ . '/../../controllers/BaseController.php';
 require_once __DIR__ . '/../../../config/database.php';
-
-use Monolog\Logger;
-use Monolog\Handler\StreamHandler;
 
 class LoginController extends BaseController {
     private UserModel $userModel;
     protected Logger $logger;
     private const RATE_LIMIT_ATTEMPTS = 5;
     private const RATE_LIMIT_WINDOW = 900; // 15 minutes
-  
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
         $this->userModel = new UserModel($pdo);
         $this->logger = new Logger('LoginController');
-        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../../logs/app.log', Logger::INFO));
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../../logs/app.log'));
     }
 
+// app/controllers/AuthController/LoginController.php
     public function login(array $data): void {
         try {
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$this->isValidCsrfToken($data['csrf_token'] ?? '')) {
-                $this->logger->warning("Invalid CSRF token or request method", ['ip' => $_SERVER['REMOTE_ADDR']]);
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                $this->logger->warning("Invalid request method", ['ip' => $_SERVER['REMOTE_ADDR']]);
                 $this->setFlashMessage('error', 'Invalid request.');
                 $this->redirect('/auth/login');
                 return;
@@ -32,6 +37,7 @@ class LoginController extends BaseController {
 
             $email = $this->sanitizeEmail($data['email'] ?? '');
             $password = trim($data['password'] ?? '');
+            $this->logger->info("Login attempt for email: $email");
 
             if ($this->isInputInvalid($email, $password)) {
                 return;
@@ -45,21 +51,35 @@ class LoginController extends BaseController {
             }
 
             $user = $this->userModel->getUserByEmail($email);
-            if (!$user || !$this->verifyPassword($password, $user['password'])) {
+            if (!$user) {
+                $this->logger->warning("User not found for email: $email");
                 $this->logLoginAttempt($email, false);
                 $this->setFlashMessage('error', 'Invalid credentials.');
                 $this->redirect('/auth/login');
                 return;
             }
 
-            $this->storeUserSession($user);
-            if (!empty($data['remember_me'])) {
-                $this->setRememberMeCookie($user['id']);
+            if (!$this->verifyPassword($password, $user['password'])) {
+                $this->logger->warning("Password verification failed for email: $email");
+                $this->logLoginAttempt($email, false);
+                $this->setFlashMessage('error', 'Invalid credentials.');
+                $this->redirect('/auth/login');
+                return;
             }
 
-            $this->logger->info("Login successful", ['user_id' => $user['id'], 'email' => $email]);
+            $this->logger->info("User authenticated, storing session for email: $email");
+            $this->storeUserSession($user);
+            if (!empty($data['remember_me'])) {
+                $this->setRememberMeCookie($user['id']); // Exception caught here doesn’t stop login
+            }
+
+            $this->logger->info("Login successful", ['user_id' => $user['id'], 'email' => $email, 'role' => $user['role']]);
             $this->setFlashMessage('success', "Welcome back, {$user['username']}!");
-            $this->redirect('/dashboard');
+            if ($user['role'] === 'admin') {
+                $this->redirect('/admin/dashboard');
+            } else {
+                $this->redirect('/user/profile');
+            }
         } catch (Exception $e) {
             $this->logger->error("Login error", [
                 'message' => $e->getMessage(),
@@ -72,21 +92,34 @@ class LoginController extends BaseController {
 
     private function isRateLimited(string $email): bool {
         $query = "SELECT COUNT(*) FROM login_attempts WHERE email = :email AND attempt_time > NOW() - INTERVAL :window SECOND";
-        $stmt = $this->db->prepare($query);
+        $stmt = $this->pdo->prepare($query); // Error: $this->pdo is null
         $stmt->execute(['email' => $email, 'window' => self::RATE_LIMIT_WINDOW]);
         return (int)$stmt->fetchColumn() >= self::RATE_LIMIT_ATTEMPTS;
     }
 
     private function logLoginAttempt(string $email, bool $success): void {
         $query = "INSERT INTO login_attempts (email, attempt_time, success) VALUES (:email, NOW(), :success)";
-        $stmt = $this->db->prepare($query);
-        $stmt->execute(['email' => $email, 'success' => $success ? 1 : 0]);
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute(['email' => $email, 'success' => (int)$success]);
     }
 
+    /**
+     * @throws Exception
+     */
     private function setRememberMeCookie(int $userId): void {
-        $token = bin2hex(random_bytes(32));
-        setcookie('remember_me', "$userId:$token", time() + (86400 * 30), "/", "", true, true);
-        $this->userModel->storeRememberMeToken($userId, password_hash($token, PASSWORD_BCRYPT));
+        try {
+            $token = bin2hex(random_bytes(32));
+            $hashedToken = password_hash($token, PASSWORD_BCRYPT);
+            setcookie('remember_me', "$userId:$token", time() + (86400 * 30), "/", "", true, true);
+            $this->userModel->storeRememberMeToken($userId, $hashedToken);
+        } catch (Exception $e) {
+            $this->logger->error("Failed to set remember me cookie", [
+                'user_id' => $userId,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            // Don’t re-throw; let login proceed without remember-me functionality
+        }
     }
 
     private function storeUserSession(array $user): void {
@@ -120,4 +153,5 @@ class LoginController extends BaseController {
     private function sanitizeEmail(string $email): string {
         return filter_var(trim($email), FILTER_SANITIZE_EMAIL);
     }
+
 }

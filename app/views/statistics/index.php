@@ -1,4 +1,11 @@
 <?php
+
+global $registrationLabels, $registrationData;
+
+use App\Models\NutritionModel;
+use App\Models\ProgressModel;
+use App\Models\WorkoutModel;
+
 session_start();
 
 $pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [
@@ -8,15 +15,27 @@ $pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [
 $userId = 3;
 require_once __DIR__ . '/../../models/ProgressModel.php';
 $progressModel = new ProgressModel($pdo);
-$progress = $progressModel->getProgressById($userId);
+try {
+    $progress = $progressModel->getProgressById($userId);
+} catch (Exception $e) {
+
+}
 
 require_once __DIR__ . '/../../models/WorkoutModel.php';
 $workoutModel = new WorkoutModel($pdo);
-$workoutStats = $workoutModel->getoWorkoutStats($userId);
+try {
+    $workoutStats = $workoutModel->getoWorkoutStats($userId);
+} catch (Exception $e) {
+
+}
 
 require_once __DIR__ . '/../../models/NutritionModel.php';
 $nutritionModel = new NutritionModel($pdo);
-$nutritionStats = $nutritionModel->getNutritionStats($userId);
+try {
+    $nutritionStats = $nutritionModel->getNutritionStats($userId);
+} catch (Exception $e) {
+
+}
 $averageCaloriesPerMeal = 40;
 $totalMeals = 3;
 

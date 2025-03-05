@@ -1,21 +1,26 @@
 <?php
-// app/controllers/NutritionController/ShowController.php
+namespace App\Controllers\NutritionController;
+
 require_once __DIR__ . '/../../models/NutritionModel.php';
 require_once __DIR__ . '/../../controllers/BaseController.php';
 require_once __DIR__ . '/../../../config/database.php';
 
+use App\Controllers\BaseController;
+use Exception;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use App\Models\NutritionModel;
+use PDO;
 
-class ShowController extends BaseController {
+class ShowControllerN extends BaseController {
     private NutritionModel $nutritionModel;
-    private Logger $logger;
+    protected Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
         $this->nutritionModel = new NutritionModel($pdo);
         $this->logger = new Logger('NutritionShowController');
-        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../../logs/app.log', Logger::INFO));
+        $this->logger->pushHandler(new StreamHandler(__DIR__ . '/../../../logs/app.log', Logger::INFO)); // Changed to INFO
         $this->requireAuth();
     }
 
@@ -31,7 +36,8 @@ class ShowController extends BaseController {
             }
 
             $detailedMealInfo = $this->getDetailedMealInfo($meal);
-            $this->render(__DIR__ . '/../../views/nutrition/show.php', [
+            $this->render('nutrition/show', [ // Fixed: Use relative path
+                'pageTitle' => 'Meal Plan Details',
                 'meal' => $detailedMealInfo,
                 'csrf_token' => $this->generateCsrfToken(),
                 'execution_time' => microtime(true) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true))
@@ -57,14 +63,14 @@ class ShowController extends BaseController {
     private function getMealSuggestions(array $meal): array {
         $suggestions = [];
         if ($meal['calories'] > 2000) {
-            $suggestions[] = 'Consider reducing calorie intake for weight management.';
+            $suggestions[] = ['suggestion' => 'Consider reducing calorie intake for weight management.'];
         }
         if (!$meal['category_id']) {
-            $suggestions[] = 'Assign a category for better organization.';
+            $suggestions[] = ['suggestion' => 'Assign a category for better organization.'];
         }
         if ($meal['protein'] < 20) {
-            $suggestions[] = 'Increase protein for muscle maintenance.';
+            $suggestions[] = ['suggestion' => 'Increase protein for muscle maintenance.'];
         }
-        return $suggestions ?: ['Looks good! Keep it up.'];
+        return $suggestions ?: [['suggestion' => 'Looks good! Keep it up.']];
     }
 }

@@ -1,15 +1,20 @@
 <?php
-// app/controllers/NutritionController/IndexController.php
+namespace App\Controllers\NutritionController;
+
 require_once __DIR__ . '/../../models/NutritionModel.php';
 require_once __DIR__ . '/../../controllers/BaseController.php';
 require_once __DIR__ . '/../../../config/database.php';
 
+use App\Controllers\BaseController;
+use Exception;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use App\Models\NutritionModel;
+use PDO;
 
-class IndexController extends BaseController {
+class IndexControllerN extends BaseController {
     private NutritionModel $nutritionModel;
-    private Logger $logger;
+    protected Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
@@ -26,7 +31,8 @@ class IndexController extends BaseController {
             $totalMeals = $this->nutritionModel->countFilteredMeals($filter, (int)$_SESSION['user_id']);
             $totalPages = max(1, (int)ceil($totalMeals / $itemsPerPage));
 
-            $this->render(__DIR__ . '/../../views/nutrition/index.php', [
+            $this->render('nutrition/index', [ // Fixed: Use relative path
+                'pageTitle' => 'Nutrition Plans',
                 'meals' => $meals,
                 'currentPage' => $page,
                 'totalPages' => $totalPages,
@@ -55,7 +61,7 @@ class IndexController extends BaseController {
                          SUM(carbs) as total_carbs, AVG(carbs) as avg_carbs,
                          SUM(fat) as total_fat, AVG(fat) as avg_fat
                   FROM meals WHERE user_id = :user_id AND deleted_at IS NULL";
-        $stmt = $this->db->prepare($query);
+        $stmt = $this->pdo->prepare($query);
         $stmt->execute(['user_id' => (int)$_SESSION['user_id']]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: [
             'total_calories' => 0, 'avg_calories' => 0,

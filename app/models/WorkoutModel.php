@@ -1,11 +1,17 @@
 <?php
 // app/models/WorkoutModel.php
+namespace App\Models;
+use Exception;
+use PDO;
 require_once __DIR__ . '/BaseModel.php';
 
 class WorkoutModel extends BaseModel {
+    /**
+     * @throws Exception
+     */
     public function createWorkout(array $data): bool {
-        $query = "INSERT INTO workouts (user_id, name, description, category_id, duration, calories, is_custom, created_at, updated_at) 
-                  VALUES (:user_id, :name, :description, :category_id, :duration, :calories, :is_custom, NOW(), NOW())";
+        $query = "INSERT INTO workouts (user_id, name, description, category_id, duration, calories, created_at, updated_at) 
+                  VALUES (:user_id, :name, :description, :category_id, :duration, :calories, NOW(), NOW())";
         return $this->execute($query, [
             'user_id' => $data['user_id'],
             'name' => $data['name'],
@@ -13,19 +19,29 @@ class WorkoutModel extends BaseModel {
             'category_id' => $data['category_id'] ?? null,
             'duration' => $data['duration'],
             'calories' => $data['calories'] ?? null,
-            'is_custom' => $data['is_custom'] ?? 0
         ]);
     }
+
+    /**
+     * @throws Exception
+     */
     public function getLinkedExercises(int $workoutId): array {
         $query = "SELECT e.id, e.name FROM exercises e JOIN workout_exercises we ON e.id = we.exercise_id WHERE we.workout_id = :workout_id";
         return $this->fetchAll($query, ['workout_id' => $workoutId]);
     }
+
+    /**
+     * @throws Exception
+     */
     public function getWorkouts(): array {
         $query = "SELECT * FROM workouts WHERE deleted_at IS NULL";
         return $this->fetchAll($query);
     }
 
 
+    /**
+     * @throws Exception
+     */
     public function getWorkoutById(int $id): ?array {
         $query = "SELECT w.*, c.name as category_name 
                   FROM workouts w 
@@ -34,6 +50,9 @@ class WorkoutModel extends BaseModel {
         return $this->fetchSingle($query, ['id' => $id]);
     }
 
+    /**
+     * @throws Exception
+     */
     public function updateWorkout(int $id, array $data): bool {
         $query = "UPDATE workouts 
                   SET name = :name, description = :description, category_id = :category_id, 
@@ -49,11 +68,17 @@ class WorkoutModel extends BaseModel {
         ]);
     }
 
+    /**
+     * @throws Exception
+     */
     public function deleteWorkout(int $id): bool {
         $query = "UPDATE workouts SET deleted_at = NOW() WHERE id = :id AND deleted_at IS NULL";
         return $this->execute($query, ['id' => $id]);
     }
 
+    /**
+     * @throws Exception
+     */
     public function getFilteredWorkouts(string $filter, int $offset, int $limit, string $sortBy, string $sortOrder, int $userId, bool $showPredefined): array {
         $query = "SELECT w.*, c.name as category_name 
                   FROM workouts w 
@@ -99,32 +124,64 @@ class WorkoutModel extends BaseModel {
         ];
     }
 
+    /**
+     * @throws Exception
+     */
     public function getAllCategories(): array {
         $query = "SELECT id, name FROM categories WHERE deleted_at IS NULL ORDER BY name ASC";
         return $this->fetchAll($query);
     }
 
+    /**
+     * @throws Exception
+     */
     public function getCategoryById(?int $categoryId): ?string {
         if (!$categoryId) return null;
         $query = "SELECT name FROM categories WHERE id = :id AND deleted_at IS NULL";
         $result = $this->fetchSingle($query, ['id' => $categoryId]);
         return $result['name'] ?? null;
     }
+
+    /**
+     * @throws Exception
+     */
     public function getoWorkoutStats(int $userId): array {
         $query = "SELECT COUNT(*) as total_workouts, AVG(duration) as avg_duration, SUM(calories) as total_calories, COUNT(DISTINCT category_id) as categories_used FROM workouts WHERE user_id = :user_id AND deleted_at IS NULL";
         return $this->fetchSingle($query, ['user_id' => $userId]);
     }
+
+    /**
+     * @throws Exception
+     */
     public function getCategoryTrends(): array {
         $query = "SELECT c.name, COUNT(w.id) as workouts, COUNT(m.id) as meals FROM categories c LEFT JOIN workouts w ON w.category_id = c.id AND w.deleted_at IS NULL LEFT JOIN meals m ON m.category_id = c.id AND m.deleted_at IS NULL GROUP BY c.id, c.name";
         return $this->fetchAll($query);
     }
+
+    /**
+     * @throws Exception
+     */
     public function getExercises() {
         $query = "SELECT id, name FROM exercises WHERE deleted_at IS NULL ORDER BY name ASC";
         return $this->fetchAll($query);
     }
+
+    /**
+     * @throws Exception
+     */
     public function getCategories() {
         $query = "SELECT id, name FROM categories WHERE deleted_at IS NULL ORDER BY name ASC";
         return $this->fetchAll($query);
     }
-    
+
+    /**
+     * @throws Exception
+     */
+    public function getTotalWorkouts(int $userId): int {
+        $query = "SELECT COUNT(*) FROM workouts WHERE user_id = :user_id AND deleted_at IS NULL";
+        return (int) $this->fetchColumn($query, ['user_id' => $userId]) ?: 0;
+    }
+
+
+
 }

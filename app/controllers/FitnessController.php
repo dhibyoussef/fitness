@@ -1,15 +1,19 @@
 <?php
 // app/controllers/FitnessController.php
+namespace App\Controllers;
+
 require_once __DIR__ . '/../models/ExerciseModel.php';
 require_once __DIR__ . '/../controllers/BaseController.php';
-require_once __DIR__ . '/../../../config/database.php';
 
+use Exception;
+use App\Models\ExerciseModel;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use PDO;
 
 class FitnessController extends BaseController {
     private ExerciseModel $exerciseModel;
-    private Logger $logger;
+    protected Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);

@@ -1,15 +1,20 @@
 <?php
-// app/controllers/ProgressController/EditController.php
+namespace App\Controllers\ProgressController;
+
 require_once __DIR__ . '/../../models/ProgressModel.php';
 require_once __DIR__ . '/../../controllers/BaseController.php';
 require_once __DIR__ . '/../../../config/database.php';
 
+use App\Controllers\BaseController;
+use Exception;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use PDO;
+use App\Models\ProgressModel;
 
-class EditController extends BaseController {
+class EditControllerP extends BaseController {
     private ProgressModel $progressModel;
-    private Logger $logger;
+    protected Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
@@ -30,7 +35,8 @@ class EditController extends BaseController {
                 throw new Exception('Progress entry not found or not owned by you.');
             }
 
-            $this->render(__DIR__ . '/../../views/progress/edit.php', [
+            $this->render('progress/edit', [
+                'pageTitle' => 'Edit Progress',
                 'progress' => $progress,
                 'csrf_token' => $this->generateCsrfToken(),
                 'execution_time' => microtime(true) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true))
@@ -48,9 +54,13 @@ class EditController extends BaseController {
     }
 
     public function update(int $id, array $data): void {
+        $transactionStarted = false;
         try {
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$this->isValidCsrfToken($data['csrf_token'] ?? '')) {
-                throw new Exception('Invalid request or security token.');
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception('Invalid request method. Expected POST, got ' . $_SERVER['REQUEST_METHOD']);
+            }
+            if (!$this->isValidCsrfToken($data['csrf_token'] ?? '')) {
+                throw new Exception('Invalid security token. Received: ' . ($data['csrf_token'] ?? 'none'));
             }
 
             if ($id <= 0) {
@@ -66,24 +76,34 @@ class EditController extends BaseController {
             $sanitizedData = [
                 'weight' => (float)$data['weight'],
                 'body_fat' => (float)$data['body_fat'],
-                'muscle_mass' => isset($data['muscle_mass']) ? (float)$data['muscle_mass'] : null,
+                'muscle_mass' => isset($data['muscle_mass']) && $data['muscle_mass'] !== '' ? (float)$data['muscle_mass'] : null,
                 'date' => $data['date']
             ];
 
+            $this->logger->info("Starting transaction for progress update", ['id' => $id]);
+            $this->pdo->beginTransaction();
+            $transactionStarted = true;
+
             if ($this->progressModel->updateProgress($id, $sanitizedData)) {
+                $this->pdo->commit();
                 $this->logger->info("Progress updated", [
                     'id' => $id,
                     'user_id' => $_SESSION['user_id']
                 ]);
                 $this->setFlashMessage('success', 'Progress updated successfully!');
             } else {
+                $this->pdo->rollBack();
                 throw new Exception('No changes detected or update failed.');
             }
         } catch (Exception $e) {
+            if ($transactionStarted) {
+                $this->pdo->rollBack();
+            }
             $this->logger->error("Update error", [
                 'message' => $e->getMessage(),
                 'id' => $id,
                 'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'data' => $data, // Log submitted data for debugging
                 'trace' => $e->getTraceAsString()
             ]);
             $this->setFlashMessage('error', $e->getMessage());
@@ -98,7 +118,7 @@ class EditController extends BaseController {
         if (empty($data['body_fat']) || !is_numeric($data['body_fat']) || $data['body_fat'] < 2 || $data['body_fat'] > 50) {
             throw new Exception('Body fat must be 2-50%.');
         }
-        if (isset($data['muscle_mass']) && (!is_numeric($data['muscle_mass']) || $data['muscle_mass'] < 10 || $data['muscle_mass'] > 100)) {
+        if (isset($data['muscle_mass']) && $data['muscle_mass'] !== '' && (!is_numeric($data['muscle_mass']) || $data['muscle_mass'] < 10 || $data['muscle_mass'] > 100)) {
             throw new Exception('Muscle mass must be 10-100 kg if provided.');
         }
         if (empty($data['date']) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['date'])) {

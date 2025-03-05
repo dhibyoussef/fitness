@@ -1,303 +1,231 @@
 <?php
-session_start();
-require_once __DIR__ . '/../../../vendor/autoload.php';
-require_once __DIR__ . '/../../../app/models/WorkoutModel.php';
-require_once __DIR__ . '/../../../app/models/NutritionModel.php';
-require_once __DIR__ . '/../../../app/models/UserModel.php';
-require_once __DIR__ . '/../../../app/controllers/BaseController.php';
-
-// Handle theme toggle
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_theme'])) {
-    $_SESSION['dark_mode'] = !($_SESSION['dark_mode'] ?? false);
-}
-
-try {
-    $pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-    ]);
-
-    $workoutModel = new WorkoutModel($pdo);
-    $nutritionModel = new NutritionModel($pdo);
-    $userModel = new UserModel($pdo);
-    $baseController = new BaseController($pdo);
-
-    $workoutStats = $workoutModel->getOverallWorkoutStatistics() ?? ['total_workouts' => 0, 'avg_duration' => 0, 'total_calories' => 0];
-    $nutritionStats = $nutritionModel->getOverallNutritionStatistics() ?? ['avg_calories_per_meal' => 0, 'total_calories' => 0, 'total_meals' => 0];
-    $categoryTrends = $workoutModel->getAllCategories() ?? [];
-    $registrationTrends = $userModel->getRegistrationStatistics() ?? [];
-    $activeUserStats = $userModel->getActiveUserStatistics() ?? [];
-
-    $registrationLabels = json_encode(array_keys($registrationTrends));
-    $registrationData = json_encode(array_values($registrationTrends));
-    $activeUserLabels = json_encode(array_keys($activeUserStats));
-    $activeUserData = json_encode(array_values($activeUserStats));
-
-    $csrf_token = $baseController->generateCsrfToken();
-    $start_time = microtime(true);
-} catch (Exception $e) {
-    die("Error: " . htmlspecialchars($e->getMessage()));
-}
+$pageTitle = $pageTitle ?? 'Admin Statistics - Fitness Tracker';
+$workoutStats = $workoutStats ?? ['total_workouts' => 0, 'avg_duration' => 0, 'total_calories' => 0];
+$nutritionStats = $nutritionStats ?? ['avg_calories_per_meal' => 0, 'total_calories' => 0, 'total_meals' => 0];
+$categoryTrends = $categoryTrends ?? [];
+$registrationLabels = $registrationLabels ?? json_encode([]);
+$registrationData = $registrationData ?? json_encode([]);
+$activeUserLabels = $activeUserLabels ?? json_encode([]);
+$activeUserData = $activeUserData ?? json_encode([]);
+$csrf_token = $csrf_token ?? '';
+$execution_time = $execution_time ?? 0;
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Statistics - Fitness Tracker</title>
+    <title><?php echo htmlspecialchars($pageTitle); ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-    body {
-        font-family: 'Poppins', sans-serif;
-        background: #f0f2f5;
-        min-height: 100vh;
-        margin: 0;
-        padding: 0;
-        overflow-x: hidden;
-    }
+        :root {
+            --primary: #4a90e2;
+            --secondary: #6c757d;
+            --background: #f4f6f9;
+            --text-color: #333333;
+            --sidebar-bg: #ffffff;
+            --card-bg: #ffffff;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
 
-    .header {
-        background: white;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        position: fixed;
-        top: 0;
-        width: 100%;
-        z-index: 1000;
-    }
+        .dark-mode {
+            --background: #1a202c;
+            --text-color: #e2e8f0;
+            --sidebar-bg: #2d3748;
+            --card-bg: #2d3748;
+        }
 
-    .sidebar {
-        position: fixed;
-        top: 70px;
-        left: 0;
-        width: 250px;
-        height: calc(100vh - 70px);
-        background: #ffffff;
-        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-        overflow-y: auto;
-    }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--background);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            overflow-x: hidden;
+        }
 
-    .sidebar-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 20px;
-    }
+        .header {
+            background: var(--card-bg);
+            height: 70px;
+            width: 100%;
+            box-shadow: var(--shadow);
+            position: fixed;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
 
-    .sidebar-logo {
-        font-size: 1.5rem;
-        margin-right: 10px;
-    }
+        .sidebar {
+            background: var(--sidebar-bg);
+            width: 250px;
+            height: 100vh;
+            position: fixed;
+            top: 70px;
+            left: 0;
+            box-shadow: var(--shadow);
+            padding: 20px;
+        }
 
-    .nav-link {
-        padding: 10px;
-        color: #4a90e2;
-        display: block;
-        transition: background 0.3s, color 0.3s;
-    }
+        .sidebar-header {
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 600;
+            color: var(--primary);
+        }
 
-    .nav-link.active,
-    .nav-link:hover {
-        background: #4a90e2;
-        color: white;
-        border-radius: 8px;
-    }
+        .sidebar .nav-link {
+            display: block;
+            color: var(--text-color);
+            text-decoration: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: 0.3s;
+        }
 
-    .dashboard-content {
-        margin-left: 270px;
-        padding: 90px 20px 20px;
-        overflow-y: auto;
-        height: 100vh;
-    }
+        .sidebar .nav-link.active,
+        .sidebar .nav-link:hover {
+            background: var(--primary);
+            color: #fff;
+        }
 
-    .dashboard-header {
-        background: #4a90e2;
-        color: white;
-        padding: 1.5rem;
-        border-radius: 10px;
-        margin-bottom: 20px;
-    }
+        .dashboard-content {
+            margin-left: 250px;
+            padding: 90px 20px 20px;
+            width: calc(100% - 250px);
+        }
 
-    .stats-card,
-    .chart-container {
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        padding: 1.5rem;
-        margin-bottom: 20px;
-    }
+        .dashboard-header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
 
-    .chart-container canvas {
-        max-height: 300px;
-    }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
 
-    .execution-time {
-        font-size: 0.9rem;
-        color: #6c757d;
-        text-align: right;
-    }
+        .chart-container, .stats-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            padding: 20px;
+            width: 100%;
+        }
 
-    .dark-mode {
-        background: #1a202c;
-        color: #e2e8f0;
-    }
+        .chart-container canvas {
+            width: 100%;
+            max-height: 300px;
+        }
 
-    .dark-mode .header,
-    .dark-mode .sidebar,
-    .dark-mode .stats-card,
-    .dark-mode .chart-container {
-        background: #2d3748;
-    }
+        .row .col-md-6 {
+            flex: 0 0 48%;
+        }
 
-    .dark-mode .dashboard-header {
-        background: #2c5282;
-    }
+        footer {
+            background: #343a40;
+            color: #fff;
+            padding: 15px;
+            text-align: center;
+            margin-left: 250px;
+            position: fixed;
+            bottom: 0;
+            width: calc(100% - 250px);
+        }
 
-    .logout-btn {
-        background: none;
-        border: none;
-        color: #dc3545;
-        font-size: 1.5rem;
-        cursor: pointer;
-        transition: color 0.3s;
-    }
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
 
-    .logout-btn:hover {
-        color: #c82333;
-    }
+            .dashboard-content {
+                margin-left: 0;
+                padding: 90px 15px;
+            }
 
-    .dark-mode .logout-btn {
-        color: #ff6b6b;
-    }
+            footer {
+                margin-left: 0;
+                width: 100%;
+            }
 
-    .dark-mode .logout-btn:hover {
-        color: #ff4040;
-    }
+            .row .col-md-6 {
+                flex: 0 0 100%;
+            }
+        }
     </style>
 </head>
-
 <body class="<?php echo isset($_SESSION['dark_mode']) && $_SESSION['dark_mode'] ? 'dark-mode' : ''; ?>">
-    <header class="header">
-        <nav class="container mx-auto px-6 py-3">
-            <div class="flex justify-between items-center">
-                <a href="/" class="text-2xl font-bold text-gray-800 dark:text-white">Fitness Tracker</a>
-                <div class="flex items-center space-x-4">
-                    <?php if (isset($_SESSION['user_id'])): ?>
-                    <a href="/user/profile"
-                        class="text-gray-600 hover:text-blue-500 dark:text-gray-300 dark:hover:text-blue-400 flex items-center">
-                        <i
-                            class="fas fa-user mr-2"></i><?php echo htmlspecialchars($_SESSION['username'] ?? 'Profile'); ?>
-                    </a>
-                    <form method="POST" action="/auth/logout">
-                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                        <button type="submit" class="logout-btn"><i class="fas fa-sign-out-alt"></i></button>
-                    </form>
-                    <?php endif; ?>
-                    <form method="POST" action="">
-                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                        <input type="hidden" name="toggle_theme" value="1">
-                        <button type="submit"
-                            class="text-gray-600 hover:text-blue-500 dark:text-gray-300 dark:hover:text-blue-400">
-                            <i
-                                class="fas <?php echo isset($_SESSION['dark_mode']) && $_SESSION['dark_mode'] ? 'fa-sun' : 'fa-moon'; ?>"></i>
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </nav>
-    </header>
 
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <i class="fas fa-dumbbell sidebar-logo"></i>
-            <h4>Admin Panel</h4>
-        </div>
-        <ul class="nav flex-column">
-            <li class="nav-item"><a href="/admin/dashboard"
-                    class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/admin/dashboard') !== false ? 'active' : ''; ?>"><i
-                        class="fas fa-tachometer-alt mr-2"></i> Dashboard</a></li>
-            <li class="nav-item"><a href="/admin/users"
-                    class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/admin/users') !== false ? 'active' : ''; ?>"><i
-                        class="fas fa-users mr-2"></i> User Management</a></li>
-            <li class="nav-item"><a href="/statistics"
-                    class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/statistics') !== false ? 'active' : ''; ?>"><i
-                        class="fas fa-chart-line mr-2"></i> Statistics</a></li>
-            <li class="nav-item"><a href="/admin/settings"
-                    class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/admin/settings') !== false ? 'active' : ''; ?>"><i
-                        class="fas fa-cog mr-2"></i> Settings</a></li>
-            <li class="nav-item"><a href="/admin/notifications"
-                    class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/admin/notifications') !== false ? 'active' : ''; ?>"><i
-                        class="fas fa-bell mr-2"></i> Notifications</a></li>
-            <li class="nav-item"><a href="/admin/logout" class="nav-link"><i class="fas fa-sign-out-alt mr-2"></i>
-                    Logout</a></li>
-        </ul>
+<header class="header">
+    <a href="/" class="text-lg font-bold">Fitness Tracker</a>
+    <form method="POST" action="">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+        <button type="submit" name="toggle_theme" value="1" class="btn btn-link text-decoration-none">
+            <i class="fas <?php echo isset($_SESSION['dark_mode']) && $_SESSION['dark_mode'] ? 'fa-sun' : 'fa-moon'; ?>"></i>
+        </button>
+    </form>
+</header>
+
+<div class="sidebar">
+    <div class="sidebar-header">Admin Panel</div>
+    <a href="/admin/dashboard" class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/dashboard') !== false ? 'active' : ''; ?>"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+    <a href="/admin/user_management" class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/user_management') !== false ? 'active' : ''; ?>"><i class="fas fa-users"></i> User Management</a>
+    <a href="/admin/statistics" class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/statistics') !== false ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Statistics</a>
+    <a href="/auth/logout" class="nav-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
+</div>
+
+<div class="dashboard-content">
+    <div class="dashboard-header">
+        <h1><?php echo htmlspecialchars($pageTitle); ?></h1>
+        <p>Track and manage user and platform statistics effectively.</p>
     </div>
 
-    <div class="dashboard-content">
-        <div class="dashboard-header">
-            <h1 class="text-3xl font-bold text-center">Statistics Overview</h1>
-            <p class="text-center">Monitor fitness tracking platform statistics</p>
-        </div>
-
-        <div class="row g-4">
-            <div class="col-md-6">
-                <div class="chart-container">
-                    <h2 class="text-lg font-semibold mb-3">User Registrations</h2>
-                    <canvas id="registrationChart"></canvas>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="chart-container">
-                    <h2 class="text-lg font-semibold mb-3">Active Users</h2>
-                    <canvas id="activeUserChart"></canvas>
-                </div>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h2>User Registrations</h2>
+                <canvas id="registrationChart"></canvas>
             </div>
         </div>
+        <div class="col-md-6">
+            <div class="chart-container">
+                <h2>Active Users</h2>
+                <canvas id="activeUserChart"></canvas>
+            </div>
+        </div>
+    </div>
 
+    <div class="row">
         <div class="stats-card">
-            <h2 class="text-lg font-semibold mb-3">Workout Statistics</h2>
+            <h2>Workout Statistics</h2>
             <p>Total Workouts: <?php echo htmlspecialchars($workoutStats['total_workouts']); ?></p>
-            <p>Average Duration: <?php echo number_format($workoutStats['avg_duration'], 1); ?> min</p>
+            <p>Average Duration: <?php echo number_format($workoutStats['avg_duration'], 1); ?> mins</p>
             <p>Total Calories Burned: <?php echo number_format($workoutStats['total_calories'], 0); ?> kcal</p>
         </div>
 
         <div class="stats-card">
-            <h2 class="text-lg font-semibold mb-3">Nutrition Statistics</h2>
-            <p>Average Calories per Meal: <?php echo number_format($nutritionStats['avg_calories_per_meal'], 1); ?> kcal
-            </p>
-            <p>Total Calories: <?php echo number_format($nutritionStats['total_calories'], 0); ?> kcal</p>
+            <h2>Nutrition Statistics</h2>
+            <p>Avg Calories per Meal: <?php echo number_format($nutritionStats['avg_calories_per_meal'], 1); ?> kcal</p>
             <p>Total Meals: <?php echo htmlspecialchars($nutritionStats['total_meals']); ?></p>
         </div>
-
-        <div class="stats-card">
-            <h2 class="text-lg font-semibold mb-3">Category Trends</h2>
-            <ul class="list-disc pl-5">
-                <?php foreach ($categoryTrends as $trend): ?>
-                <li><?php echo htmlspecialchars($trend['name'] ?? 'Unknown'); ?>:
-                    <?php echo htmlspecialchars($trend['count'] ?? 0); ?> workouts</li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-
-        <?php $execution_time = microtime(true) - $start_time; ?>
-        <p class="execution-time">Page loaded in <?php echo number_format($execution_time, 4); ?> seconds</p>
     </div>
+</div>
 
-    <footer class="bg-gray-800 text-white py-4 dark:bg-gray-900">
-        <div class="container mx-auto text-center">
-            <p>© <?php echo date('Y'); ?> Fitness Tracker. All rights reserved.</p>
-        </div>
-    </footer>
+<footer>
+    <p>© <?php echo date('Y'); ?> Fitness Tracker. All rights reserved.</p>
+</footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
     document.addEventListener('DOMContentLoaded', () => {
-        const regCtx = document.getElementById('registrationChart').getContext('2d');
-        new Chart(regCtx, {
+        const registrationCtx = document.getElementById('registrationChart').getContext('2d');
+        new Chart(registrationCtx, {
             type: 'bar',
             data: {
                 labels: <?php echo $registrationLabels; ?>,
@@ -305,33 +233,12 @@ try {
                     label: 'Registrations',
                     data: <?php echo $registrationData; ?>,
                     backgroundColor: '#4a90e2',
-                    borderColor: '#4a90e2',
-                    borderWidth: 1
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Registrations'
-                        }
-                    },
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Month'
-                        }
-                    }
-                }
-            }
         });
 
-        const activeCtx = document.getElementById('activeUserChart').getContext('2d');
-        new Chart(activeCtx, {
+        const activeUsersCtx = document.getElementById('activeUserChart').getContext('2d');
+        new Chart(activeUsersCtx, {
             type: 'line',
             data: {
                 labels: <?php echo $activeUserLabels; ?>,
@@ -339,32 +246,12 @@ try {
                     label: 'Active Users',
                     data: <?php echo $activeUserData; ?>,
                     borderColor: '#28a745',
+                    fill: true,
                     backgroundColor: 'rgba(40, 167, 69, 0.2)',
-                    fill: true
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Active Users'
-                        }
-                    },
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Time Period'
-                        }
-                    }
-                }
-            }
         });
     });
-    </script>
+</script>
 </body>
-
 </html>

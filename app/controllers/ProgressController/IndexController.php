@@ -1,15 +1,20 @@
 <?php
 // app/controllers/ProgressController/IndexController.php
+namespace App\Controllers\ProgressController;
 require_once __DIR__ . '/../../models/ProgressModel.php';
 require_once __DIR__ . '/../../controllers/BaseController.php';
 require_once __DIR__ . '/../../../config/database.php';
 
+use App\Controllers\BaseController;
+use Exception;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use PDO;
+use App\Models\ProgressModel;
 
-class IndexController extends BaseController {
+class IndexControllerP extends BaseController {
     private ProgressModel $progressModel;
-    private Logger $logger;
+    protected Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
@@ -27,7 +32,8 @@ class IndexController extends BaseController {
             $totalPages = max(1, (int)ceil($totalEntries / $itemsPerPage));
 
             $stats = $this->calculateProgressStats($progressEntries);
-            $this->render(__DIR__ . '/../../views/progress/index.php', [
+            $this->render('progress/index', [ // Fixed: Use relative path
+                'pageTitle' => 'Progress Tracking', // Added for your view
                 'progressEntries' => $progressEntries,
                 'currentPage' => $page,
                 'totalPages' => $totalPages,

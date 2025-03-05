@@ -1,5 +1,8 @@
 <?php
 // C:\xampp\htdocs\fitness-app\app\views\workout\custom.php
+use App\Controllers\BaseController;
+use App\Models\WorkoutModel;
+
 session_start();
 require_once __DIR__ . '/../../models/WorkoutModel.php';
 require_once __DIR__ . '/../../controllers/BaseController.php';
@@ -286,34 +289,19 @@ try {
                 </a>
             </li>
             <li class="nav-item">
-                <a href="/workout/index"
-                    class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/workout/index') !== false ? 'active' : ''; ?>">
-                    <i class="fas fa-dumbbell mr-2"></i> My Workouts
-                </a>
+                <a href="/workouts/index" class="nav-link"><i class="fas fa-dumbbell me-2"></i> Workouts</a>
+
             </li>
+
             <li class="nav-item">
-                <a href="/workout/create"
-                    class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/workout/create') !== false ? 'active' : ''; ?>">
-                    <i class="fas fa-plus-circle mr-2"></i> Create Workout
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="/workout/custom"
-                    class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/workout/custom') !== false ? 'active' : ''; ?>">
-                    <i class="fas fa-edit mr-2"></i> Custom Workout
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="/nutrition"
+                <a href="nutrition/index"
                     class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/nutrition') !== false ? 'active' : ''; ?>">
                     <i class="fas fa-apple-alt mr-2"></i> Nutrition
                 </a>
             </li>
             <li class="nav-item">
-                <a href="/profile"
-                    class="nav-link <?php echo strpos($_SERVER['REQUEST_URI'], '/profile') !== false ? 'active' : ''; ?>">
-                    <i class="fas fa-user mr-2"></i> Profile
-                </a>
+                <a href="/user/profile" class="nav-link"><i class="fas fa-user me-2"></i> Profile</a>
+
             </li>
         </ul>
     </div>
@@ -370,9 +358,13 @@ try {
                             </option>
                             <?php endforeach; ?>
                         </select>
-                        <input type="number" name="exercises[0][sets]" placeholder="Sets" class="form-control" min="1">
-                        <input type="text" name="exercises[0][reps]" placeholder="e.g., 10 or 8-12"
-                            class="form-control">
+                        <label>
+                            <input type="number" name="exercises[0][sets]" placeholder="Sets" class="form-control" min="1">
+                        </label>
+                        <label>
+                            <input type="text" name="exercises[0][reps]" placeholder="e.g., 10 or 8-12"
+                                class="form-control">
+                        </label>
                     </div>
                     <button type="button" id="add-exercise" class="btn btn-outline-secondary btn-icon mt-2">
                         <i class="fas fa-plus"></i> Add Exercise
@@ -380,7 +372,7 @@ try {
                 </div>
 
                 <div class="d-flex justify-content-end gap-2">
-                    <a href="/workout/index" class="btn btn-secondary btn-icon">
+                    <a href="/workouts/index" class="btn btn-secondary btn-icon">
                         <i class="fas fa-times"></i> Cancel
                     </a>
                     <button type="submit" class="btn btn-primary btn-icon">

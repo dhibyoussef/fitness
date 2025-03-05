@@ -1,15 +1,20 @@
 <?php
-// app/controllers/ProgressController/DeleteController.php
+namespace App\Controllers\ProgressController;
+
 require_once __DIR__ . '/../../models/ProgressModel.php';
 require_once __DIR__ . '/../../controllers/BaseController.php';
 require_once __DIR__ . '/../../../config/database.php';
 
+use App\Controllers\BaseController;
+use App\Models\ProgressModel;
+use Exception;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use PDO;
 
-class DeleteController extends BaseController {
+class DeleteControllerP extends BaseController {
     private ProgressModel $progressModel;
-    private Logger $logger;
+    protected Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
@@ -31,10 +36,12 @@ class DeleteController extends BaseController {
             }
 
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                $this->render(__DIR__ . '/../../views/progress/delete.php', [
+                $this->render('progress/delete', [ // Fixed: Use relative path
+                    'pageTitle' => 'Delete Progress',
                     'id' => $id,
                     'date' => $progress['date'],
-                    'csrf_token' => $this->generateCsrfToken()
+                    'csrf_token' => $this->generateCsrfToken(),
+                    'execution_time' => microtime(true) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true))
                 ]);
                 return;
             }
@@ -47,16 +54,22 @@ class DeleteController extends BaseController {
                 throw new Exception('Deletion not confirmed.');
             }
 
+            $this->pdo->beginTransaction();
             if ($this->progressModel->deleteProgress($id)) {
+                $this->pdo->commit();
                 $this->logger->info("Progress deleted", [
                     'id' => $id,
                     'user_id' => $_SESSION['user_id']
                 ]);
                 $this->setFlashMessage('success', 'Progress entry deleted successfully.');
             } else {
+                $this->pdo->rollBack();
                 throw new Exception('Failed to delete progress entry.');
             }
         } catch (Exception $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             $this->logger->error("Deletion error", [
                 'message' => $e->getMessage(),
                 'id' => $id,

@@ -1,13 +1,20 @@
 <?php
 // app/models/ExerciseModel.php
+namespace App\Models;
 require_once __DIR__ . '/BaseModel.php';
 
 class ExerciseModel extends BaseModel {
+    /**
+     * @throws \Exception
+     */
     public function getUserExercises(int $userId): array {
         $query = "SELECT * FROM exercises WHERE user_id = :user_id AND deleted_at IS NULL ORDER BY name ASC";
         return $this->fetchAll($query, ['user_id' => $userId]);
     }
 
+    /**
+     * @throws \Exception
+     */
     public function getExerciseById(int $id, int $userId): ?array {
         $query = "SELECT * FROM exercises WHERE id = :id AND user_id = :user_id AND deleted_at IS NULL";
         return $this->fetchSingle($query, ['id' => $id, 'user_id' => $userId]);
@@ -36,6 +43,9 @@ class ExerciseModel extends BaseModel {
         ]);
     }
 
+    /**
+     * @throws \Exception
+     */
     public function deleteExercise(int $id, int $userId): bool {
         $query = "UPDATE exercises SET deleted_at = NOW() WHERE id = :id AND user_id = :user_id AND deleted_at IS NULL";
         return $this->execute($query, ['id' => $id, 'user_id' => $userId]);
@@ -48,6 +58,9 @@ class ExerciseModel extends BaseModel {
         return $this->fetchAll($query, ['user_id' => $userId]);
     }
 
+    /**
+     * @throws \Exception
+     */
     public function setGoal(array $data): bool {
         $query = "INSERT INTO goals (user_id, exercise_id, target_weight, attempts, created_at) 
                   VALUES (:user_id, :exercise_id, :target_weight, :attempts, NOW())

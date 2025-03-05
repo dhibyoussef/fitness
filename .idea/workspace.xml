@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="f30d0c9a-ed16-42e0-856d-a85e767e5299" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/jsLibraryMappings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/php.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/sqldialects.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controllers/AdminController/StatisticsController.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/controllers/StatisticsController/StatisticsController.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/views/dashboard/index.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/views/home/index.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/views/user/delete.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/views/user/edit.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/cache/b68d8dabd3b9d6819977dbed8a70b0ed.cache" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/derby.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/AdminController/DashboardController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/AdminController/DashboardController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/AdminController/StatisticsControllert.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/AdminController/UserManagementController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/AdminController/UserManagementController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/AuthController/LoginController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/AuthController/LoginController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/AuthController/LogoutController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/AuthController/LogoutController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/AuthController/SignupController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/AuthController/SignupController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/BaseController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/BaseController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/FitnessController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/FitnessController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/LanguageController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/LanguageController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/NutritionController/CreateController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/NutritionController/CreateController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/NutritionController/DeleteController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/NutritionController/DeleteController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/NutritionController/EditController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/NutritionController/EditController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/NutritionController/IndexController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/NutritionController/IndexController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/NutritionController/ShowController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/NutritionController/ShowController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/ProgressController/CreateController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/ProgressController/CreateController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/ProgressController/DeleteController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/ProgressController/DeleteController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/ProgressController/EditController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/ProgressController/EditController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/ProgressController/IndexController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/ProgressController/IndexController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/ProgressController/ShowController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/ProgressController/ShowController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/StatisticsController/StatisticsControllert.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/UserController/DeleteController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/UserController/DeleteController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/UserController/EditController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/UserController/EditController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/UserController/ProfileController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/UserController/ProfileController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/WorkoutController/CreateController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/WorkoutController/CreateController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/WorkoutController/CustomController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/WorkoutController/CustomController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/WorkoutController/DeleteController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/WorkoutController/DeleteController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/WorkoutController/IndexController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/WorkoutController/IndexController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/WorkoutController/ShowController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/WorkoutController/ShowController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/controllers/WorkoutController/editController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/controllers/WorkoutController/editController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/middleware/AdminMiddleware.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/middleware/AdminMiddleware.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/middleware/AuthMiddleware.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/middleware/AuthMiddleware.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/middleware/CsrfMiddleware.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/middleware/CsrfMiddleware.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/middleware/ErrorHandlerMiddleware.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/middleware/ErrorHandlerMiddleware.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/AdminModel.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/AdminModel.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/BaseModel.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/BaseModel.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/ExerciseModel.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/ExerciseModel.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/NutritionModel.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/NutritionModel.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/ProfileModel.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/ProfileModel.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/ProgressModel.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/ProgressModel.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/UserModel.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/UserModel.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/WorkoutModel.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/WorkoutModel.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/admin/dashboard.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/admin/dashboard.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/admin/statistics.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/admin/statistics.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/admin/user_details.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/admin/user_details.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/admin/user_management.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/admin/user_management.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/auth/login.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/auth/login.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/auth/logout.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/auth/logout.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/auth/signup.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/auth/signup.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/error/error.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/error/error.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/nutrition/create.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/nutrition/create.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/nutrition/delete.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/nutrition/delete.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/nutrition/edit.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/nutrition/edit.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/nutrition/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/nutrition/index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/nutrition/show.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/nutrition/show.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/progress/create.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/progress/create.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/progress/delete.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/progress/delete.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/progress/edit.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/progress/edit.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/progress/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/progress/index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/progress/show.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/progress/show.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/statistics/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/statistics/index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/user/deleate.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/user/profile.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/user/profile.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/user/update.php" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/workout/.gitkeep" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/workout/create.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/workout/create.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/workout/custom.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/workout/custom.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/workout/delete.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/workout/delete.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/workout/edit.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/workout/edit.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/workout/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/workout/index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/views/workout/show.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/views/workout/show.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/composer.json" beforeDir="false" afterPath="$PROJECT_DIR$/composer.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/composer.lock" beforeDir="false" afterPath="$PROJECT_DIR$/composer.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config/config.php" beforeDir="false" afterPath="$PROJECT_DIR$/config/config.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config/database.php" beforeDir="false" afterPath="$PROJECT_DIR$/config/database.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/logs/app.log" beforeDir="false" afterPath="$PROJECT_DIR$/logs/app.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/index.php" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ComposerSettings" synchronizationState="SYNCHRONIZE">
+    <pharConfigPath>$PROJECT_DIR$/composer.json</pharConfigPath>
+    <execution>
+      <executable path="composer" />
+    </execution>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/index.php" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" />
+  </component>
+  <component name="PhpWorkspaceProjectConfiguration" interpreter_name="C:\xampp\php\php.exe">
+    <include_path>
+      <path value="$PROJECT_DIR$/vendor/psr/log" />
+      <path value="$PROJECT_DIR$/vendor/monolog/monolog" />
+      <path value="$PROJECT_DIR$/vendor/composer" />
+    </include_path>
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 3
+}</component>
+  <component name="ProjectId" id="2tiHAgHffD3le51WORqoYeHirbF" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "C:/xampp/htdocs/fitness-app/fitnesstracker.sql",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "preferences.lookFeel",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-76f8388c3a79-JavaScript-PS-243.24978.50" />
+        <option value="bundled-php-predefined-a98d8de5180a-fbeb0b58ac0f-com.jetbrains.php.sharedIndexes-PS-243.24978.50" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="f30d0c9a-ed16-42e0-856d-a85e767e5299" name="Changes" comment="" />
+      <created>1740827835243</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1740827835243</updated>
+      <workItem from="1740827836794" duration="2712000" />
+      <workItem from="1740922499348" duration="14452000" />
+      <workItem from="1740993459299" duration="39000" />
+      <workItem from="1741080441412" duration="48015000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

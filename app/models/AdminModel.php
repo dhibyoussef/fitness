@@ -1,8 +1,16 @@
 <?php
 // app/models/AdminModel.php
+namespace App\Models;
+use App\Models\BaseModel;
+use Exception;
+use PDO;
+
 require_once __DIR__ . '/BaseModel.php';
 
 class AdminModel extends BaseModel {
+    /**
+     * @throws Exception
+     */
     public function getUserCount(): int {
         $query = "SELECT COUNT(*) as total FROM users WHERE deleted_at IS NULL";
         $result = $this->fetchSingle($query);
@@ -47,6 +55,9 @@ class AdminModel extends BaseModel {
         ];
     }
 
+    /**
+     * @throws Exception
+     */
     public function getRegistrationTrends(): array {
         $query = "SELECT DATE_FORMAT(created_at, '%Y-%m') as month, 
                          COUNT(*) as registrations 
@@ -64,6 +75,9 @@ class AdminModel extends BaseModel {
         }, $trends);
     }
 
+    /**
+     * @throws Exception
+     */
     public function getUserActivitySummary(): array {
         $query = "SELECT u.id, u.username, 
                          COUNT(DISTINCT w.id) as workouts, 

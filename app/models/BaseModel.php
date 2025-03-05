@@ -1,9 +1,13 @@
 <?php
 // app/models/BaseModel.php
+namespace App\Models;
 require_once __DIR__ . '/../../vendor/autoload.php';
 
+use Exception;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use PDO;
+use PDOException;
 
 class BaseModel {
     protected PDO $pdo;
@@ -30,43 +34,35 @@ class BaseModel {
         }
     }
 
+    /**
+     * @throws Exception
+     */
     protected function fetchAll(string $query, array $params = []): array {
         try {
             $stmt = $this->pdo->prepare($query);
-            $stmt->execute($params);
-            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            if ($result === false) {
-                throw new Exception("No records found.");
+            foreach ($params as $key => $value) {
+                $type = is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR;
+                $stmt->bindValue($key, $value, $type);
             }
-            return $result;
-        } catch (PDOException $e) {
+            $stmt->execute();
+            return $stmt->fetchAll();
+        } catch (Exception $e) {
             $this->logger->error("Database fetch all error", [
                 'query' => $query,
                 'params' => $params,
                 'message' => $e->getMessage()
             ]);
-            throw new Exception("Error fetching all records: " . $e->getMessage(), (int)$e->getCode());
-        } catch (Exception $e) {
-            $this->logger->error("General fetch all error", [
-                'query' => $query,
-                'params' => $params,
-                'message' => $e->getMessage()
-            ]);
-            throw new Exception("Error fetching all records: " . $e->getMessage(), (int)$e->getCode());
+            throw new Exception("Error fetching all records: " . $e->getMessage());
         }
     }
 
-    protected function execute(string $query, array $params = []): bool {
+    public function execute(string $query, array $params = []): bool {
         try {
             $stmt = $this->pdo->prepare($query);
-            return $stmt->execute($params);
+            $stmt->execute($params);
+            return true;
         } catch (PDOException $e) {
-            $this->logger->error("Database execute error", [
-                'query' => $query,
-                'params' => $params,
-                'message' => $e->getMessage()
-            ]);
-            throw new Exception("Error executing query: " . $e->getMessage(), (int)$e->getCode());
+            throw new Exception("Database execute error: " . $e->getMessage());
         }
     }
 
@@ -89,11 +85,20 @@ class BaseModel {
         $this->logger->debug("Transaction rolled back");
     }
 
+    /**
+     * @throws Exception
+     */
     protected function fetchPaginated(string $query, array $params = [], int $limit, int $offset): array {
         $query .= " LIMIT :limit OFFSET :offset";
         $params['limit'] = $limit;
         $params['offset'] = $offset;
         return $this->fetchAll($query, $params);
+    }
+    protected function fetchColumn(string $query, array $array)
+    {
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute($array);
+        return $stmt->fetchColumn();
     }
 
 }

@@ -1,6 +1,7 @@
 <?php
 // app/views/admin/user_details.php
-session_start();
+use App\Models\UserModel;
+
 require_once __DIR__ . '/../../models/UserModel.php';
 
 $pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [  
@@ -10,7 +11,11 @@ $pdo = new PDO('mysql:host=localhost;dbname=fitnesstracker', 'root', '', [
 $userId = 3;
 require_once __DIR__ . '/../../models/UserModel.php';
 $userModel = new UserModel($pdo);
-$user = $userModel->getUserById($userId);
+try {
+    $user = $userModel->getUserById($userId);
+} catch (Exception $e) {
+
+}
 
 ?>
 <!DOCTYPE html>

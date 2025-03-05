@@ -1,15 +1,20 @@
 <?php
-// app/controllers/ProgressController/ShowController.php
+namespace App\Controllers\ProgressController;
+
 require_once __DIR__ . '/../../models/ProgressModel.php';
 require_once __DIR__ . '/../../controllers/BaseController.php';
 require_once __DIR__ . '/../../../config/database.php';
 
+use App\Controllers\BaseController;
+use Exception;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use PDO;
+use App\Models\ProgressModel;
 
-class ShowController extends BaseController {
+class ShowControllerP extends BaseController {
     private ProgressModel $progressModel;
-    private Logger $logger;
+    protected Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
@@ -30,7 +35,8 @@ class ShowController extends BaseController {
                 throw new Exception('Progress entry not found or not owned by you.');
             }
 
-            $this->render(__DIR__ . '/../../views/progress/show.php', [
+            $this->render('progress/show', [ // Fixed: Use relative path
+                'pageTitle' => 'Progress Details',
                 'progress' => $progress,
                 'csrf_token' => $this->generateCsrfToken(),
                 'execution_time' => microtime(true) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true))

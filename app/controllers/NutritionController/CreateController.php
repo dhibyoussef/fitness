@@ -1,15 +1,20 @@
 <?php
-// app/controllers/NutritionController/CreateController.php
+namespace App\Controllers\NutritionController;
+
 require_once __DIR__ . '/../../models/NutritionModel.php';
 require_once __DIR__ . '/../../controllers/BaseController.php';
 require_once __DIR__ . '/../../../config/database.php';
 
+use App\Controllers\BaseController;
+use Exception;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use App\Models\NutritionModel;
+use PDO;
 
-class CreateController extends BaseController {
+class CreateControllerN extends BaseController {
     private NutritionModel $nutritionModel;
-    private Logger $logger;
+    protected Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
@@ -19,10 +24,22 @@ class CreateController extends BaseController {
         $this->requireAuth();
     }
 
+    public function showCreateForm(): void {
+        $this->render('nutrition/create', [
+            'pageTitle' => 'Create Meal Plan',
+            'csrf_token' => $this->generateCsrfToken(),
+            'categories' => $this->nutritionModel->getAllCategories(),
+            'execution_time' => microtime(true) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true))
+        ]);
+    }
+
     public function create(array $data): void {
         try {
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$this->isValidCsrfToken($data['csrf_token'] ?? '')) {
-                throw new Exception('Invalid request or security token.');
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception('Invalid request method. Expected POST, got ' . $_SERVER['REQUEST_METHOD']);
+            }
+            if (!$this->isValidCsrfToken($data['csrf_token'] ?? '')) {
+                throw new Exception('Invalid security token. Received: ' . ($data['csrf_token'] ?? 'none'));
             }
 
             $this->validateNutritionData($data);
@@ -30,14 +47,16 @@ class CreateController extends BaseController {
                 'user_id' => (int)$_SESSION['user_id'],
                 'name' => $this->sanitizeInput($data['name']),
                 'calories' => (int)$data['calories'],
-                'protein' => isset($data['protein']) ? (float)$data['protein'] : null,
-                'carbs' => isset($data['carbs']) ? (float)$data['carbs'] : null,
-                'fat' => isset($data['fat']) ? (float)$data['fat'] : null,
-                'category_id' => isset($data['category_id']) ? (int)$data['category_id'] : null,
+                'protein' => isset($data['protein']) && $data['protein'] !== '' ? (float)$data['protein'] : null,
+                'carbs' => isset($data['carbs']) && $data['carbs'] !== '' ? (float)$data['carbs'] : null,
+                'fat' => isset($data['fat']) && $data['fat'] !== '' ? (float)$data['fat'] : null,
+                'category_id' => isset($data['category_id']) && $data['category_id'] !== '' ? (int)$data['category_id'] : null,
                 'created_at' => date('Y-m-d H:i:s')
             ];
 
+            $this->pdo->beginTransaction();
             if ($this->nutritionModel->createMeal($sanitizedData)) {
+                $this->pdo->commit();
                 $this->logger->info("Meal plan created", [
                     'user_id' => $_SESSION['user_id'],
                     'name' => $sanitizedData['name']
@@ -45,12 +64,17 @@ class CreateController extends BaseController {
                 $this->setFlashMessage('success', 'Meal plan created successfully!');
                 $this->redirect('/nutrition/index');
             } else {
+                $this->pdo->rollBack();
                 throw new Exception('Failed to create meal plan.');
             }
         } catch (Exception $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             $this->logger->error("Creation error", [
                 'message' => $e->getMessage(),
                 'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'data' => $data, // Debug submitted data
                 'trace' => $e->getTraceAsString()
             ]);
             $this->setFlashMessage('error', $e->getMessage());
@@ -65,16 +89,16 @@ class CreateController extends BaseController {
         if (!isset($data['calories']) || !$this->isValidCalories($data['calories'])) {
             throw new Exception('Calories must be a number between 1 and 5000.');
         }
-        if (isset($data['protein']) && !$this->isValidMacro($data['protein'])) {
+        if (isset($data['protein']) && $data['protein'] !== '' && !$this->isValidMacro($data['protein'])) {
             throw new Exception('Protein must be a number between 0 and 1000 grams.');
         }
-        if (isset($data['carbs']) && !$this->isValidMacro($data['carbs'])) {
+        if (isset($data['carbs']) && $data['carbs'] !== '' && !$this->isValidMacro($data['carbs'])) {
             throw new Exception('Carbs must be a number between 0 and 1000 grams.');
         }
-        if (isset($data['fat']) && !$this->isValidMacro($data['fat'])) {
+        if (isset($data['fat']) && $data['fat'] !== '' && !$this->isValidMacro($data['fat'])) {
             throw new Exception('Fat must be a number between 0 and 1000 grams.');
         }
-        if (isset($data['category_id']) && !$this->isValidCategory($data['category_id'])) {
+        if (isset($data['category_id']) && $data['category_id'] !== '' && !$this->isValidCategory($data['category_id'])) {
             throw new Exception('Invalid category selected.');
         }
     }
@@ -93,8 +117,8 @@ class CreateController extends BaseController {
     }
 
     private function isValidCategory($categoryId): bool {
-        $query = "SELECT COUNT(*) FROM categories WHERE id = :id";
-        $stmt = $this->db->prepare($query);
+        $query = "SELECT COUNT(*) FROM categories WHERE id = :id AND deleted_at IS NULL"; // Added deleted_at check
+        $stmt = $this->pdo->prepare($query); // Fixed: Use $this->pdo instead of $this->db
         $stmt->execute(['id' => (int)$categoryId]);
         return $stmt->fetchColumn() > 0;
     }

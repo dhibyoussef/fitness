@@ -1,15 +1,20 @@
 <?php
-// app/controllers/AdminController/UserManagementController.php
+namespace App\Controllers\AdminController;
+
 require_once __DIR__ . '/../../models/UserModel.php';
 require_once __DIR__ . '/../../controllers/BaseController.php';
 require_once __DIR__ . '/../../../config/database.php';
 
+use App\Controllers\BaseController;
+use Exception;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use PDO;
+use App\Models\UserModel;
 
 class UserManagementController extends BaseController {
     private UserModel $userModel;
-    private Logger $logger;
+    protected Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
@@ -26,7 +31,8 @@ class UserManagementController extends BaseController {
             $users = $this->userModel->getAllUsers($offset, $perPage, $search);
             $totalUsers = $this->userModel->getUserCount($search);
 
-            $this->render(__DIR__ . '/../../views/admin/user_management.php', [
+            $this->render('admin/user_management', [ // Fixed: Use relative path
+                'pageTitle' => 'User Management - Fitness Tracker',
                 'users' => $users,
                 'currentPage' => $page,
                 'totalPages' => max(1, ceil($totalUsers / $perPage)),
@@ -41,7 +47,8 @@ class UserManagementController extends BaseController {
                 'user_id' => $_SESSION['user_id'] ?? 'unknown',
                 'trace' => $e->getTraceAsString()
             ]);
-            $this->renderError("Failed to load users: " . htmlspecialchars($e->getMessage()));
+            $this->setFlashMessage('error', "Failed to load users: " . $e->getMessage());
+            $this->redirect('/admin/dashboard');
         }
     }
 
@@ -50,14 +57,16 @@ class UserManagementController extends BaseController {
             $this->checkAdminPermissions();
             $user = $this->userModel->getUserById($id);
             if ($user) {
-                $this->render(__DIR__ . '/../../views/admin/user_details.php', [
+                $this->render('admin/user_details', [
+                    'pageTitle' => 'User Details - Fitness Tracker',
                     'user' => $user,
                     'csrf_token' => $this->generateCsrfToken(),
                     'execution_time' => microtime(true) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true))
                 ]);
             } else {
                 $this->logger->warning("User not found", ['id' => $id]);
-                $this->renderError("User ID $id not found.");
+                $this->setFlashMessage('error', "User ID $id not found.");
+                $this->redirect('/admin/user_management');
             }
         } catch (Exception $e) {
             $this->logger->error("User details error", [
@@ -65,7 +74,8 @@ class UserManagementController extends BaseController {
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            $this->renderError("Failed to load user details: " . htmlspecialchars($e->getMessage()));
+            $this->setFlashMessage('error', "Failed to load user details: " . $e->getMessage());
+            $this->redirect('/admin/user_management');
         }
     }
 
@@ -76,20 +86,25 @@ class UserManagementController extends BaseController {
                 throw new Exception("Invalid request or security token.");
             }
 
-            $userIds = json_decode($_POST['user_ids'] ?? '[]', true);
+            $userIds = $_POST['user_ids'] ?? [];
             if (!is_array($userIds) || empty($userIds)) {
                 throw new Exception("No users selected for activation.");
             }
 
+            $this->pdo->beginTransaction();
             $activated = 0;
             foreach ($userIds as $id) {
                 if ($this->userModel->activateUser((int)$id)) {
                     $activated++;
                 }
             }
+            $this->pdo->commit();
             $this->logger->info("Bulk user activation", ['count' => $activated, 'user_ids' => $userIds]);
             $this->setFlashMessage('success', "$activated users activated successfully.");
         } catch (Exception $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             $this->logger->error("Bulk activation error", [
                 'message' => $e->getMessage(),
                 'user_id' => $_SESSION['user_id'] ?? 'unknown',

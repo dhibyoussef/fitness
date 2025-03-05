@@ -1,15 +1,20 @@
 <?php
-// app/controllers/NutritionController/EditController.php
+namespace App\Controllers\NutritionController;
+
 require_once __DIR__ . '/../../models/NutritionModel.php';
 require_once __DIR__ . '/../../controllers/BaseController.php';
 require_once __DIR__ . '/../../../config/database.php';
 
+use App\Controllers\BaseController;
+use Exception;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+use App\Models\NutritionModel;
+use PDO;
 
-class EditController extends BaseController {
+class EditControllerN extends BaseController {
     private NutritionModel $nutritionModel;
-    private Logger $logger;
+    protected Logger $logger;
 
     public function __construct(PDO $pdo) {
         parent::__construct($pdo);
@@ -30,7 +35,8 @@ class EditController extends BaseController {
                 throw new Exception('Meal plan not found or not owned by you.');
             }
 
-            $this->render(__DIR__ . '/../../views/nutrition/edit.php', [
+            $this->render('nutrition/edit', [ // Fixed: Use relative path
+                'pageTitle' => 'Edit Meal Plan',
                 'nutrition' => $mealPlan,
                 'categories' => $this->nutritionModel->getAllCategories(),
                 'csrf_token' => $this->generateCsrfToken(),
@@ -50,8 +56,11 @@ class EditController extends BaseController {
 
     public function update(int $id, array $data): void {
         try {
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$this->isValidCsrfToken($data['csrf_token'] ?? '')) {
-                throw new Exception('Invalid request or security token.');
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception('Invalid request method. Expected POST, got ' . $_SERVER['REQUEST_METHOD']);
+            }
+            if (!$this->isValidCsrfToken($data['csrf_token'] ?? '')) {
+                throw new Exception('Invalid security token. Received: ' . ($data['csrf_token'] ?? 'none'));
             }
 
             if ($id <= 0) {
@@ -67,13 +76,15 @@ class EditController extends BaseController {
             $sanitizedData = [
                 'name' => $this->sanitizeInput($data['name']),
                 'calories' => (int)$data['calories'],
-                'protein' => isset($data['protein']) ? (float)$data['protein'] : $mealPlan['protein'],
-                'carbs' => isset($data['carbs']) ? (float)$data['carbs'] : $mealPlan['carbs'],
-                'fat' => isset($data['fat']) ? (float)$data['fat'] : $mealPlan['fat'],
-                'category_id' => isset($data['category_id']) ? (int)$data['category_id'] : $mealPlan['category_id']
+                'protein' => isset($data['protein']) && $data['protein'] !== '' ? (float)$data['protein'] : null,
+                'carbs' => isset($data['carbs']) && $data['carbs'] !== '' ? (float)$data['carbs'] : null,
+                'fat' => isset($data['fat']) && $data['fat'] !== '' ? (float)$data['fat'] : null,
+                'category_id' => isset($data['category_id']) && $data['category_id'] !== '' ? (int)$data['category_id'] : null
             ];
 
+            $this->pdo->beginTransaction();
             if ($this->nutritionModel->updateMeal($id, $sanitizedData)) {
+                $this->pdo->commit();
                 $this->logger->info("Meal plan updated", [
                     'id' => $id,
                     'user_id' => $_SESSION['user_id'],
@@ -81,16 +92,22 @@ class EditController extends BaseController {
                 ]);
                 $this->setFlashMessage('success', 'Meal plan updated successfully!');
             } else {
+                $this->pdo->rollBack();
                 throw new Exception('No changes detected or update failed.');
             }
         } catch (Exception $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
             $this->logger->error("Update error", [
                 'message' => $e->getMessage(),
                 'id' => $id,
                 'user_id' => $_SESSION['user_id'] ?? 'unknown',
+                'data' => $data, // Debug submitted data
                 'trace' => $e->getTraceAsString()
             ]);
             $this->setFlashMessage('error', $e->getMessage());
+            $this->redirect('/nutrition/edit/' . $id); // Redirect back to edit form on error
         }
         $this->redirect('/nutrition/index');
     }
@@ -102,16 +119,16 @@ class EditController extends BaseController {
         if (!isset($data['calories']) || !$this->isValidCalories($data['calories'])) {
             throw new Exception('Calories must be 1-5000.');
         }
-        if (isset($data['protein']) && !$this->isValidMacro($data['protein'])) {
+        if (isset($data['protein']) && $data['protein'] !== '' && !$this->isValidMacro($data['protein'])) {
             throw new Exception('Protein must be 0-1000 grams.');
         }
-        if (isset($data['carbs']) && !$this->isValidMacro($data['carbs'])) {
+        if (isset($data['carbs']) && $data['carbs'] !== '' && !$this->isValidMacro($data['carbs'])) {
             throw new Exception('Carbs must be 0-1000 grams.');
         }
-        if (isset($data['fat']) && !$this->isValidMacro($data['fat'])) {
+        if (isset($data['fat']) && $data['fat'] !== '' && !$this->isValidMacro($data['fat'])) {
             throw new Exception('Fat must be 0-1000 grams.');
         }
-        if (isset($data['category_id']) && !$this->isValidCategory($data['category_id'])) {
+        if (isset($data['category_id']) && $data['category_id'] !== '' && !$this->isValidCategory($data['category_id'])) {
             throw new Exception('Invalid category.');
         }
     }
@@ -130,8 +147,8 @@ class EditController extends BaseController {
     }
 
     private function isValidCategory($categoryId): bool {
-        $query = "SELECT COUNT(*) FROM categories WHERE id = :id";
-        $stmt = $this->db->prepare($query);
+        $query = "SELECT COUNT(*) FROM categories WHERE id = :id AND deleted_at IS NULL"; // Fixed: Use $this->pdo and add deleted_at check
+        $stmt = $this->pdo->prepare($query);
         $stmt->execute(['id' => (int)$categoryId]);
         return $stmt->fetchColumn() > 0;
     }
